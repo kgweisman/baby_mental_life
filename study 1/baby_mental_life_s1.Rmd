@@ -1,6 +1,6 @@
 ---
 title: "Baby Mental Life: Study 1"
-date: 2018-07-31
+date: 2018-08-01
 output: 
   html_notebook:
     toc: true
@@ -12,9 +12,11 @@ knitr::opts_chunk$set(fig.width = 3, fig.asp = 0.67)
 ```
 
 
-"Baby Mental Life: Study 1" was conducted on MTurk on 2018-07-31.
+"Baby Mental Life: Study 1" was conducted on MTurk on 2018-07-31 through 2018-08-01.
 
-Our planned sample was 300 participants, and we anticipated that roughly 85-90% of recruited participants would pass all of our attention checks, so we initially recruited 342 participants. After filtering out participants who failed at least one of our attention checks, we ended up retaining only XX participants, so we recruited an additional XX participants. In the end, we ended up with a sample of XX participants who passed our attention checks (out of XX participants recruited in total).
+Our planned sample was 300 participants, and we anticipated that roughly 85-90% of recruited participants would pass all of our attention checks, so we initially recruited 342 participants (on the idea that ~87.5% of 342 ~ 300 participants; note that for administrative purposes we need to recuit participants in batches that were divisible by 9). After filtering out participants who failed at least one of our attention checks, we ended up retaining only 80% of participants, so we recruited an additional 36 participants for a total of 378 people recruited (on the idea that ~80% of 378 ~ 300 participants; note that for administrative purposes we need to recuit participants in batches that were divisible by 9). In a slight deviation from our preregistered recruitment plan, we limited these additional 36 participants to women, because we had an unexpectedly large imbalance of men to women. 
+
+In the end, we ended up with a sample of XX participants who passed our attention checks.
 
 Each participant assessed children's mental capacities at 3 target ages: newborns, 9-month-olds, and 5-year-olds. For each target, they rated 60 mental capacities on a scale from 0 (not at all capable) to 100 (completely capable). 
 
