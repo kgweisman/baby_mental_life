@@ -15,7 +15,7 @@ heatmap_fun <- function(efa){
     group_by(capacity) %>%
     top_n(1, abs(loading)) %>%
     ungroup() %>%
-    arrange(factor, abs(loading)) %>%
+    arrange(desc(factor), abs(loading)) %>%
     mutate(order = 1:length(levels(factor(loadings$capacity)))) %>%
     select(capacity, order)
   
@@ -151,7 +151,7 @@ itemsplot_fun <- function(efa,
     group_by(capacity) %>%
     top_n(1, abs(loading)) %>%
     ungroup() %>%
-    arrange(factor, abs(loading)) %>%
+    arrange(desc(factor), abs(loading)) %>%
     mutate(order = 1:length(levels(factor(loadings$capacity)))) %>%
     select(factor, capacity, order)
   
