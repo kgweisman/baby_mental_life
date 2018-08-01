@@ -297,7 +297,7 @@ reten_all_par <- reten_all_PA$nfact
 ### What are these factors?
 
 ```{r}
-efa_all_par <- fa(d_all, reten_all_par, "oblimin",
+efa_all_par <- fa(d_all, nfactors = reten_all_par, rotate = "oblimin",
                   scores = "tenBerge", impute = "median")
 ```
 
@@ -384,7 +384,7 @@ reten_all_bic <- data.frame(reten_all_vss$vss.stats %>%
 ### What are these factors?
 
 ```{r}
-efa_all_bic <- fa(d_all, reten_all_bic, "oblimin",
+efa_all_bic <- fa(d_all, nfactors = reten_all_bic, rotate = "oblimin",
                   scores = "tenBerge", impute = "median")
 ```
 
@@ -471,8 +471,8 @@ print(paste("Preset criteria suggest retaining", reten_all_k, "factors"))
 ### What are these factors?
 
 ```{r}
-efa_all_k <- fa(d_all, reten_all_k, "oblimin",
-                scores = "tenBerge", impute = "median")
+efa_all_k <- fa(d_all, nfactors = reten_all_k, rotate = "oblimin",
+                  scores = "tenBerge", impute = "median")
 ```
 
 ```{r, fig.width = 3, fig.asp = 2}
@@ -546,8 +546,8 @@ reten_00mo_par <- reten_00mo_PA$nfact
 ### What are these factors?
 
 ```{r}
-efa_00mo_par <- fa(d_00mo, reten_00mo_par, "oblimin",
-                   scores = "tenBerge", impute = "median")
+efa_00mo_par <- fa(d_all, nfactors = reten_00mo_par, rotate = "oblimin",
+                  scores = "tenBerge", impute = "median")
 ```
 
 ```{r, fig.width = 3, fig.asp = 2}
@@ -578,7 +578,7 @@ reten_00mo_bic <- data.frame(reten_00mo_vss$vss.stats %>%
 ### What are these factors?
 
 ```{r}
-efa_00mo_bic <- fa(d_00mo, reten_00mo_bic, "oblimin",
+efa_00mo_bic <- fa(d_00mo, nfactors = reten_00mo_bic, rotate = "oblimin",
                    scores = "tenBerge", impute = "median")
 ```
 
@@ -607,7 +607,7 @@ print(paste("Preset criteria suggest retaining", reten_00mo_k, "factors"))
 ### What are these factors?
 
 ```{r}
-efa_00mo_k <- fa(d_00mo, reten_00mo_k, "oblimin",
+efa_00mo_k <- fa(d_00mo, nfactors = reten_00mo_k, rotate = "oblimin",
                  scores = "tenBerge", impute = "median")
 ```
 
@@ -640,7 +640,7 @@ reten_09mo_par <- reten_09mo_PA$nfact
 ### What are these factors?
 
 ```{r}
-efa_09mo_par <- fa(d_09mo, reten_09mo_par, "oblimin",
+efa_09mo_par <- fa(d_09mo, nfactors = reten_09mo_par, rotate = "oblimin",
                    scores = "tenBerge", impute = "median")
 ```
 
@@ -672,7 +672,7 @@ reten_09mo_bic <- data.frame(reten_09mo_vss$vss.stats %>%
 ### What are these factors?
 
 ```{r}
-efa_09mo_bic <- fa(d_09mo, reten_09mo_bic, "oblimin",
+efa_09mo_bic <- fa(d_09mo, nfactors = reten_09mo_bic, rotate = "oblimin",
                    scores = "tenBerge", impute = "median")
 ```
 
@@ -701,7 +701,7 @@ print(paste("Preset criteria suggest retaining", reten_09mo_k, "factors"))
 ### What are these factors?
 
 ```{r}
-efa_09mo_k <- fa(d_09mo, reten_09mo_k, "oblimin",
+efa_09mo_k <- fa(d_09mo, nfactors = reten_09mo_k, rotate = "oblimin",
                  scores = "tenBerge", impute = "median")
 ```
 
@@ -734,7 +734,7 @@ reten_60mo_par <- reten_60mo_PA$nfact
 ### What are these factors?
 
 ```{r}
-efa_60mo_par <- fa(d_60mo, reten_60mo_par, "oblimin",
+efa_60mo_par <- fa(d_60mo, nfactors = reten_60mo_par, rotate = "oblimin",
                    scores = "tenBerge", impute = "median")
 ```
 
@@ -766,7 +766,7 @@ reten_60mo_bic <- data.frame(reten_60mo_vss$vss.stats %>%
 ### What are these factors?
 
 ```{r}
-efa_60mo_bic <- fa(d_60mo, reten_60mo_bic, "oblimin",
+efa_60mo_bic <- fa(d_60mo, nfactors = reten_60mo_bic, rotate = "oblimin",
                    scores = "tenBerge", impute = "median")
 ```
 
@@ -795,7 +795,7 @@ print(paste("Preset criteria suggest retaining", reten_60mo_k, "factors"))
 ### What are these factors?
 
 ```{r}
-efa_60mo_k <- fa(d_60mo, reten_60mo_k, "oblimin",
+efa_60mo_k <- fa(d_60mo, nfactors = reten_60mo_k, rotate = "oblimin",
                  scores = "tenBerge", impute = "median")
 ```
 
