@@ -546,7 +546,7 @@ reten_00mo_par <- reten_00mo_PA$nfact
 ### What are these factors?
 
 ```{r}
-efa_00mo_par <- fa(d_all, nfactors = reten_00mo_par, rotate = "oblimin",
+efa_00mo_par <- fa(d_00mo, nfactors = reten_00mo_par, rotate = "oblimin",
                   scores = "tenBerge", impute = "median")
 ```
 
