@@ -578,7 +578,7 @@ If we consider t-values > 2 to be "significant" and use the plot above to guide 
 - `target.Q`: This increase is generally non-linear.
 - [`factor1`, `factor2`, ...: By definition, because we're using factor scores, which are similar to z-scores, the differences in means across factors are ~0.]
 - `target.L:factor1`: The linear increase is more dramatic (steeper slope) for MR1, compared to other factors. 
-- `target.Q:factor1`: The nonlinearity is more dramatic (curvier curve) for MR1, compared to other factors. 
+- `target.Q:factor1`: The nonlinearity is more dramatic (curvier and/or concave instead of convex curve) for MR1, compared to other factors. 
 - `target.L:factor2`: The linear increase is less dramatic (shallower slope) for MR2, compared to other factors. 
 - `target.Q:factor2`: The nonlinearity is less dramatic (flatter curve) for MR2, compared to other factors. 
 - `target.L:factor3`: The linear increase is more dramatic (steeper slope) for MR3, compared to other factors. 
@@ -664,7 +664,7 @@ If we consider t-values > 2 to be "significant" and use the plot above to guide 
 - `target.Q`: This increase is *not* generally non-linear.
 - [`factor1`, `factor2`, ...: By definition, because we're using factor scores, which are similar to z-scores, the differences in means across factors are ~0.]
 - `target.L:factor1`: The linear increase is more dramatic (steeper slope) for MR1, compared to other factors. 
-- `target.Q:factor1`: The nonlinearity is more dramatic (curvier curve) for MR1, compared to other factors. 
+- `target.Q:factor1`: The nonlinearity is more dramatic (curvier and/or concave instead of convex curve) for MR1, compared to other factors. 
 - `target.L:factor2`: The linear increase is less dramatic (shallower slope) for MR2, compared to other factors. 
 - `target.Q:factor2`: The nonlinearity for MR2 is comparable to other factors. 
 - `target.L:factor3`: The linear increase is more dramatic (steeper slope) for MR3, compared to other factors. 
@@ -672,7 +672,7 @@ If we consider t-values > 2 to be "significant" and use the plot above to guide 
 - `target.L:factor4`: The linear increase is more dramatic (steeper slope) for MR4, compared to other factors. 
 - `target.Q:factor4`: The nonlinearity is less dramatic (flatter curve) for MR4, compared to other factors. 
 - `target.L:factor5`: The linear increase is less dramatic (shallower slope) for MR5, compared to other factors. 
-- `target.Q:factor5`: The nonlinearity is more dramatic (curvier curve) for MR5, compared to other factors. 
+- `target.Q:factor5`: The nonlinearity is more dramatic (curvier and/or concave instead of convex curve) for MR5, compared to other factors. 
 
 ```{r, fig.width = 5, fig.asp = 1}
 itemsplot_fun(efa_all_bic, target = "all") + 
@@ -743,7 +743,7 @@ If we consider t-values > 2 to be "significant" and use the plot above to guide 
 - `target.Q`: This increase is generally non-linear.
 - [`factor1`: By definition, because we're using factor scores, which are similar to z-scores, the differences in means across factors are ~0.]
 - `target.L:factor1`: The linear increase is more dramatic (steeper slope) for MR1, compared to other factors. 
-- `target.Q:factor1`: The nonlinearity is more dramatic (curvier curve) for MR1, compared to other factors. 
+- `target.Q:factor1`: The nonlinearity is more dramatic (curvier and/or concave instead of convex curve) for MR1, compared to other factors. 
 
 ```{r, fig.width = 5, fig.asp = 1}
 itemsplot_fun(efa_all_k, target = "all") + 
@@ -799,7 +799,7 @@ reten_00mo_bic <- data.frame(reten_00mo_vss$vss.stats %>%
 ### What are these factors?
 
 ```{r}
-efa_00mo_bic <- fa(d_00mo, reten_00mo_bic, "oblimin"
+efa_00mo_bic <- fa(d_00mo, reten_00mo_bic, "oblimin",
                    scores = "tenBerge", impute = "median")
 ```
 
