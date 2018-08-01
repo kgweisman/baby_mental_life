@@ -27,6 +27,7 @@ For more details about the study, see our preregistration [here](https://osf.io/
 library(tidyverse)
 library(langcog) # source: https://github.com/langcog/langcog-package
 library(psych)
+library(lme4)
 
 # set theme for ggplots
 theme_set(theme_bw())
@@ -44,7 +45,8 @@ reten_fun <- function(df, rot_type = c("oblimin", "varimax", "none")){
   max_k <- max_ok(n_var)
   
   # run efa with max factors, unrotated
-  fa_unrot <- fa(df, nfactors = max_k, rotate = "none")
+  fa_unrot <- fa(df, nfactors = max_k, rotate = "none", 
+                 scores = "tenBerge", impute = "median")
   eigen <- fa_unrot$Vaccounted %>%
     data.frame() %>%
     rownames_to_column("param") %>%
@@ -53,7 +55,9 @@ reten_fun <- function(df, rot_type = c("oblimin", "varimax", "none")){
     filter(`SS loadings` > 1, `Proportion Explained` > 0.05)
   retain_k <- nrow(eigen)
   
-  fa_rot <- fa(df, nfactors = retain_k, rotate = rot_type)
+  fa_rot <- fa(df, nfactors = retain_k, rotate = rot_type,
+               scores = "tenBerge", impute = "median")
+
   loadings <- fa_rot$loadings[] %>%
     data.frame() %>%
     rownames_to_column("capacity") %>%
@@ -514,7 +518,8 @@ reten_all_par <- reten_all_PA$nfact
 ### What are these factors?
 
 ```{r}
-efa_all_par <- fa(d_all, reten_all_par, "oblimin")
+efa_all_par <- fa(d_all, reten_all_par, "oblimin",
+                  scores = "tenBerge", impute = "median")
 ```
 
 ```{r, fig.width = 3, fig.asp = 2}
@@ -546,6 +551,39 @@ scoresplot_fun(efa_all_par, target = "all") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
 
+Here's a multilevel linear regression on these factor scores, with random intercepts and slopes (for target and factor) by participant. Target is coded with linear and quadratic contrasts, and factor is effect-coded for comparison with the grand mean (with the last factor as the base, -1):
+
+```{r}
+efa_all_par_scores <- efa_all_par$scores[] %>%
+  data.frame() %>%
+  rownames_to_column("subid") %>%
+  mutate(target = gsub("^.*_target", "target", subid),
+         ResponseId = gsub("_target.*$", "", subid)) %>%
+  select(-subid) %>%
+  gather(factor, score, -target, -ResponseId) %>%
+  mutate_at(vars(target, factor), funs(factor))
+
+contrasts(efa_all_par_scores$target) <- contr.poly(3)
+contrasts(efa_all_par_scores$factor) <- contr.sum(reten_all_par)
+
+r_all_par <- lmer(score ~ target * factor + (target + factor | ResponseId),
+                  efa_all_par_scores)
+summary(r_all_par, corr = F)
+```
+
+If we consider t-values > 2 to be "significant" and use the plot above to guide our interpretation, here's what we conclude:
+
+- [`(Intercept)`: By definition, because we're using factor scores, which are similar to z-scores, the intercept is ~0.]
+- `target.L`: Overall, mental capacity attributions increase with target age.
+- `target.Q`: This increase is generally non-linear.
+- [`factor1`, `factor2`, ...: By definition, because we're using factor scores, which are similar to z-scores, the differences in means across factors are ~0.]
+- `target.L:factor1`: The linear increase is more dramatic (steeper slope) for MR1, compared to other factors. 
+- `target.Q:factor1`: The nonlinearity is more dramatic (curvier curve) for MR1, compared to other factors. 
+- `target.L:factor2`: The linear increase is less dramatic (shallower slope) for MR2, compared to other factors. 
+- `target.Q:factor2`: The nonlinearity is less dramatic (flatter curve) for MR2, compared to other factors. 
+- `target.L:factor3`: The linear increase is more dramatic (steeper slope) for MR3, compared to other factors. 
+- `target.Q:factor3`: The nonlinearity is less dramatic (flatter curve) for MR3, compared to other factors. 
+
 ```{r, fig.width = 5, fig.asp = 1}
 itemsplot_fun(efa_all_par, target = "all") + 
   labs(title = "Parallel Analysis")
@@ -567,7 +605,8 @@ reten_all_bic <- data.frame(reten_all_vss$vss.stats %>%
 ### What are these factors?
 
 ```{r}
-efa_all_bic <- fa(d_all, reten_all_bic, "oblimin")
+efa_all_bic <- fa(d_all, reten_all_bic, "oblimin",
+                  scores = "tenBerge", impute = "median")
 ```
 
 ```{r, fig.width = 3, fig.asp = 2}
@@ -597,6 +636,44 @@ scoresplot_fun(efa_all_bic, target = "all") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
 
+Here's a multilevel linear regression on these factor scores, with random intercepts and slopes (for target and factor) by participant. Target is coded with linear and quadratic contrasts, and factor is effect-coded for comparison with the grand mean (with the last factor as the base, -1):
+
+```{r}
+efa_all_bic_scores <- efa_all_bic$scores[] %>%
+  data.frame() %>%
+  rownames_to_column("subid") %>%
+  mutate(target = gsub("^.*_target", "target", subid),
+         ResponseId = gsub("_target.*$", "", subid)) %>%
+  select(-subid) %>%
+  gather(factor, score, -target, -ResponseId) %>%
+  mutate_at(vars(target, factor), funs(factor))
+
+contrasts(efa_all_bic_scores$target) <- contr.poly(3)
+contrasts(efa_all_bic_scores$factor) <- contr.sum(reten_all_bic)
+
+r_all_bic <- lmer(score ~ target * factor + (target + factor | ResponseId),
+                  efa_all_bic_scores,
+                  control = lmerControl(optCtrl = list(maxfun = 100000)))
+summary(r_all_bic, corr = F)
+```
+
+If we consider t-values > 2 to be "significant" and use the plot above to guide our interpretation, here's what we conclude:
+
+- [`(Intercept)`: By definition, because we're using factor scores, which are similar to z-scores, the intercept is ~0.]
+- `target.L`: Overall, mental capacity attributions increase with target age.
+- `target.Q`: This increase is *not* generally non-linear.
+- [`factor1`, `factor2`, ...: By definition, because we're using factor scores, which are similar to z-scores, the differences in means across factors are ~0.]
+- `target.L:factor1`: The linear increase is more dramatic (steeper slope) for MR1, compared to other factors. 
+- `target.Q:factor1`: The nonlinearity is more dramatic (curvier curve) for MR1, compared to other factors. 
+- `target.L:factor2`: The linear increase is less dramatic (shallower slope) for MR2, compared to other factors. 
+- `target.Q:factor2`: The nonlinearity for MR2 is comparable to other factors. 
+- `target.L:factor3`: The linear increase is more dramatic (steeper slope) for MR3, compared to other factors. 
+- `target.Q:factor3`: The nonlinearity is less dramatic (flatter curve) for MR3, compared to other factors. 
+- `target.L:factor4`: The linear increase is more dramatic (steeper slope) for MR4, compared to other factors. 
+- `target.Q:factor4`: The nonlinearity is less dramatic (flatter curve) for MR4, compared to other factors. 
+- `target.L:factor5`: The linear increase is less dramatic (shallower slope) for MR5, compared to other factors. 
+- `target.Q:factor5`: The nonlinearity is more dramatic (curvier curve) for MR5, compared to other factors. 
+
 ```{r, fig.width = 5, fig.asp = 1}
 itemsplot_fun(efa_all_bic, target = "all") + 
   labs(title = "Minimizing BIC")
@@ -615,7 +692,8 @@ print(paste("Preset criteria suggest retaining", reten_all_k, "factors"))
 ### What are these factors?
 
 ```{r}
-efa_all_k <- fa(d_all, reten_all_k, "oblimin")
+efa_all_k <- fa(d_all, reten_all_k, "oblimin",
+                scores = "tenBerge", impute = "median")
 ```
 
 ```{r, fig.width = 3, fig.asp = 2}
@@ -635,6 +713,37 @@ heatmap_fun(efa_all_k) +
 scoresplot_fun(efa_all_k, target = "all") + 
   labs(title = "Preset factor retention criteria (Weisman et al., 2017)")
 ```
+
+Here's a multilevel linear regression on these factor scores, with random intercepts and slopes (for target and factor) by participant. Target is coded with linear and quadratic contrasts, and factor is effect-coded for comparison with the grand mean (with the last factor as the base, -1):
+
+```{r}
+efa_all_k_scores <- efa_all_k$scores[] %>%
+  data.frame() %>%
+  rownames_to_column("subid") %>%
+  mutate(target = gsub("^.*_target", "target", subid),
+         ResponseId = gsub("_target.*$", "", subid)) %>%
+  select(-subid) %>%
+  gather(factor, score, -target, -ResponseId) %>%
+  mutate_at(vars(target, factor), funs(factor))
+
+contrasts(efa_all_k_scores$target) <- contr.poly(3)
+contrasts(efa_all_k_scores$factor) <- contr.sum(reten_all_k)
+
+r_all_k <- lmer(score ~ target * factor + (target + factor | ResponseId),
+                efa_all_k_scores)
+summary(r_all_k, corr = F)
+```
+
+**There are some problems with this model that I haven't addressed** - see warnings above. Ignoring them for now... 
+
+If we consider t-values > 2 to be "significant" and use the plot above to guide our interpretation, here's what we conclude:
+
+- [`(Intercept)`: By definition, because we're using factor scores, which are similar to z-scores, the intercept is ~0.]
+- `target.L`: Overall, mental capacity attributions increase with target age.
+- `target.Q`: This increase is generally non-linear.
+- [`factor1`: By definition, because we're using factor scores, which are similar to z-scores, the differences in means across factors are ~0.]
+- `target.L:factor1`: The linear increase is more dramatic (steeper slope) for MR1, compared to other factors. 
+- `target.Q:factor1`: The nonlinearity is more dramatic (curvier curve) for MR1, compared to other factors. 
 
 ```{r, fig.width = 5, fig.asp = 1}
 itemsplot_fun(efa_all_k, target = "all") + 
@@ -658,7 +767,8 @@ reten_00mo_par <- reten_00mo_PA$nfact
 ### What are these factors?
 
 ```{r}
-efa_00mo_par <- fa(d_00mo, reten_00mo_par, "oblimin")
+efa_00mo_par <- fa(d_00mo, reten_00mo_par, "oblimin",
+                   scores = "tenBerge", impute = "median")
 ```
 
 ```{r, fig.width = 3, fig.asp = 2}
@@ -689,7 +799,8 @@ reten_00mo_bic <- data.frame(reten_00mo_vss$vss.stats %>%
 ### What are these factors?
 
 ```{r}
-efa_00mo_bic <- fa(d_00mo, reten_00mo_bic, "oblimin")
+efa_00mo_bic <- fa(d_00mo, reten_00mo_bic, "oblimin"
+                   scores = "tenBerge", impute = "median")
 ```
 
 ```{r, fig.width = 3, fig.asp = 2}
@@ -717,7 +828,8 @@ print(paste("Preset criteria suggest retaining", reten_00mo_k, "factors"))
 ### What are these factors?
 
 ```{r}
-efa_00mo_k <- fa(d_00mo, reten_00mo_k, "oblimin")
+efa_00mo_k <- fa(d_00mo, reten_00mo_k, "oblimin",
+                 scores = "tenBerge", impute = "median")
 ```
 
 ```{r, fig.width = 3, fig.asp = 2}
@@ -749,7 +861,8 @@ reten_09mo_par <- reten_09mo_PA$nfact
 ### What are these factors?
 
 ```{r}
-efa_09mo_par <- fa(d_09mo, reten_09mo_par, "oblimin")
+efa_09mo_par <- fa(d_09mo, reten_09mo_par, "oblimin",
+                   scores = "tenBerge", impute = "median")
 ```
 
 ```{r, fig.width = 3, fig.asp = 2}
@@ -780,7 +893,8 @@ reten_09mo_bic <- data.frame(reten_09mo_vss$vss.stats %>%
 ### What are these factors?
 
 ```{r}
-efa_09mo_bic <- fa(d_09mo, reten_09mo_bic, "oblimin")
+efa_09mo_bic <- fa(d_09mo, reten_09mo_bic, "oblimin",
+                   scores = "tenBerge", impute = "median")
 ```
 
 ```{r, fig.width = 3, fig.asp = 2}
@@ -808,7 +922,8 @@ print(paste("Preset criteria suggest retaining", reten_09mo_k, "factors"))
 ### What are these factors?
 
 ```{r}
-efa_09mo_k <- fa(d_09mo, reten_09mo_k, "oblimin")
+efa_09mo_k <- fa(d_09mo, reten_09mo_k, "oblimin",
+                 scores = "tenBerge", impute = "median")
 ```
 
 ```{r, fig.width = 3, fig.asp = 2}
@@ -840,7 +955,8 @@ reten_60mo_par <- reten_60mo_PA$nfact
 ### What are these factors?
 
 ```{r}
-efa_60mo_par <- fa(d_60mo, reten_60mo_par, "oblimin")
+efa_60mo_par <- fa(d_60mo, reten_60mo_par, "oblimin",
+                   scores = "tenBerge", impute = "median")
 ```
 
 ```{r, fig.width = 3, fig.asp = 2}
@@ -871,7 +987,8 @@ reten_60mo_bic <- data.frame(reten_60mo_vss$vss.stats %>%
 ### What are these factors?
 
 ```{r}
-efa_60mo_bic <- fa(d_60mo, reten_60mo_bic, "oblimin")
+efa_60mo_bic <- fa(d_60mo, reten_60mo_bic, "oblimin",
+                   scores = "tenBerge", impute = "median")
 ```
 
 ```{r, fig.width = 3, fig.asp = 2}
@@ -899,7 +1016,8 @@ print(paste("Preset criteria suggest retaining", reten_60mo_k, "factors"))
 ### What are these factors?
 
 ```{r}
-efa_60mo_k <- fa(d_60mo, reten_60mo_k, "oblimin")
+efa_60mo_k <- fa(d_60mo, reten_60mo_k, "oblimin",
+                 scores = "tenBerge", impute = "median")
 ```
 
 ```{r, fig.width = 3, fig.asp = 2}
