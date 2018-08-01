@@ -16,7 +16,7 @@ knitr::opts_chunk$set(fig.width = 3, fig.asp = 0.67)
 
 Our planned sample was 300 participants, and we anticipated that roughly 85-90% of recruited participants would pass all of our attention checks, so we initially recruited 342 participants (on the idea that ~87.5% of 342 ~ 300 participants; note that for administrative purposes we need to recuit participants in batches that were divisible by 9). After filtering out participants who failed at least one of our attention checks, we ended up retaining only 80% of participants, so we recruited an additional 36 participants for a total of 378 people recruited (on the idea that ~80% of 378 ~ 300 participants; note that for administrative purposes we need to recuit participants in batches that were divisible by 9). In a slight deviation from our preregistered recruitment plan, we limited these additional 36 participants to women, because we had an unexpectedly large imbalance of men to women. 
 
-In the end, we ended up with a sample of XX participants who passed our attention checks.
+In the end, we ended up with a sample of 301 participants who passed our attention checks.
 
 Each participant assessed children's mental capacities at 3 target ages: newborns, 9-month-olds, and 5-year-olds. For each target, they rated 60 mental capacities on a scale from 0 (not at all capable) to 100 (completely capable). 
 
@@ -34,240 +34,18 @@ theme_set(theme_bw())
 ```
 
 ```{r}
-# run source code (extra functions)
+# run source code (extra home-made functions)
 source("./scripts/max_factors_efa.R")
-
-# make function for implementing criteria
-reten_fun <- function(df, rot_type = c("oblimin", "varimax", "none")){
-  
-  # figure out max number of factors to retain
-  n_var <- length(names(df))
-  max_k <- max_ok(n_var)
-  
-  # run efa with max factors, unrotated
-  fa_unrot <- fa(df, nfactors = max_k, rotate = "none", 
-                 scores = "tenBerge", impute = "median")
-  eigen <- fa_unrot$Vaccounted %>%
-    data.frame() %>%
-    rownames_to_column("param") %>%
-    gather(factor, value, -param) %>%
-    spread(param, value) %>%
-    filter(`SS loadings` > 1, `Proportion Explained` > 0.05)
-  retain_k <- nrow(eigen)
-  
-  fa_rot <- fa(df, nfactors = retain_k, rotate = rot_type,
-               scores = "tenBerge", impute = "median")
-
-  loadings <- fa_rot$loadings[] %>%
-    data.frame() %>%
-    rownames_to_column("capacity") %>%
-    gather(factor, loading, -capacity) %>%
-    group_by(capacity) %>%
-    top_n(1, abs(loading)) %>%
-    ungroup() %>%
-    count(factor)
-  retain_k_final <- nrow(loadings)
-  
-  return(retain_k_final)
-}
-
-# make function for generating heatmap
-heatmap_fun <- function(efa){
-  
-  # get factor loadings
-  loadings <- efa$loadings[] %>%
-    data.frame() %>%
-    rownames_to_column("capacity") %>%
-    gather(factor, loading, -capacity)
-  
-  # get fa.sort() order
-  order <- loadings %>%
-    group_by(capacity) %>%
-    top_n(1, abs(loading)) %>%
-    ungroup() %>%
-    arrange(factor, abs(loading)) %>%
-    mutate(order = 1:length(levels(factor(loadings$capacity)))) %>%
-    select(capacity, order)
-  
-  # make plot
-  plot <- ggplot(loadings %>% 
-                   left_join(order) %>%
-                   mutate(capacity = gsub("_", " ", capacity)),
-                 aes(x = factor, 
-                     y = reorder(capacity, order), 
-                     fill = loading, 
-                     label = format(round(loading, 2), nsmall = 2))) +
-    geom_tile(color = "black") +
-    geom_text(size = 3) +
-    scale_fill_distiller(limits = c(-1, 1), 
-                         palette = "RdYlBu",
-                         guide = guide_colorbar(barheight = 20)) +
-    theme_minimal() +
-    scale_x_discrete(position = "top") +
-    labs(x = "", y = "")
-  
-  return(plot)
-
-}
-
-# make function for plotting factor scores by factor, target
-scoresplot_fun <- function(efa, 
-                          target = c("all", "newborns", "9-month-olds", "5-year-olds")){
-  
-  # generate list of targets
-  target_list <- case_when(
-    target == "all" ~ c("target00mo", "target09mo", "target60mo"),
-    target == "newborns" ~ "target00mo",
-    target == "9-month-olds" ~ "target09mo",
-    target == "5-year-olds" ~ "target60mo"
-  )
-  
-  # make usable dataframe
-  df <- efa$scores[] %>%
-    data.frame() %>%
-    rownames_to_column("subid") %>%
-    mutate(ResponseId = gsub("_target.*$", "", subid),
-           target = gsub("R_.*_", "", subid)) %>%
-    filter(target %in% target_list) %>%
-    select(-subid) %>%
-    gather(factor, score, -c(ResponseId, target)) %>%
-    mutate(target = recode_factor(target,
-                                  "target00mo" = "newborns",
-                                  "target09mo" = "9-month-olds",
-                                  "target60mo" = "5-year-olds"))
-  
-  # get bootstrapped means
-  df_boot <- df %>%
-    group_by(target, factor) %>%
-    multi_boot_standard("score", na.rm = T) %>%
-    ungroup()
-  
-  # get first items for each factor
-  first_items <- efa$loadings[] %>%
-    data.frame() %>%
-    rownames_to_column("capacity") %>%
-    gather(factor, loading, -capacity) %>%
-    group_by(factor) %>%
-    top_n(3, abs(loading)) %>%
-    mutate(capacity = gsub("_", " ", capacity),
-           cap_list = str_c(capacity, collapse = ", "),
-           cap_list = paste0(cap_list, "...")) %>%
-    ungroup() %>%
-    select(-capacity, -loading) %>%
-    distinct()
-
-  # make plot
-  plot <- ggplot(df,
-                 aes(x = target, 
-                     y = score, 
-                     color = factor)) +
-    facet_grid(~ factor) +
-    geom_path(aes(group = ResponseId), alpha = 0.1) +
-    geom_path(data = df_boot,
-              aes(y = mean, group = factor), color = "black", lty = 2) +
-    geom_pointrange(data = df_boot,
-                    aes(y = mean, ymin = ci_lower, ymax = ci_upper),
-                    color = "black", fatten = 0.75) +
-    geom_text(data = first_items,
-              aes(label = gsub('(.{1,30})(\\s|$)', '\\1\n', cap_list)),
-              x = 0.5, y = max(df$score), size = 3, color = "black",
-              hjust = 0, vjust = 1) +
-    theme_bw() +
-    labs(x = "target", y = "factor score",
-         subtitle = "Error bars are bootstrapped 95% confidence intervals") +
-    guides(color = "none")
-    # guides(color = guide_legend(override.aes = list(alpha = 1, size = 1)))
-  
-  return(plot)
-  
-}
-
-# make function for plotting individual item means by factor, target
-itemsplot_fun <- function(efa,
-                          target = c("all", "newborns", "9-month-olds", "5-year-olds")){
-  
-  # generate list of targets
-  target_list <- case_when(
-    target == "all" ~ c("target00mo", "target09mo", "target60mo"),
-    target == "newborns" ~ "target00mo",
-    target == "9-month-olds" ~ "target09mo",
-    target == "5-year-olds" ~ "target60mo"
-  )
-  
-  # make usable dataframe
-  df <- d_all %>%
-    rownames_to_column("subid") %>%
-    mutate(ResponseId = gsub("_target.*$", "", subid),
-           target = gsub("R_.*_", "", subid)) %>%
-    filter(target %in% target_list) %>%
-    select(-subid) %>%
-    gather(capacity, response, -c(ResponseId, target)) %>%
-    mutate(target = recode_factor(target,
-                                  "target00mo" = "newborns",
-                                  "target09mo" = "9-month-olds",
-                                  "target60mo" = "5-year-olds"))
-  
-  # get factor loadings
-  loadings <- efa$loadings[] %>%
-    data.frame() %>%
-    rownames_to_column("capacity") %>%
-    gather(factor, loading, -capacity)
-  
-  # get fa.sort() order
-  order <- efa$loadings[] %>%
-    data.frame() %>%
-    rownames_to_column("capacity") %>%
-    gather(factor, loading, -capacity) %>%
-    group_by(capacity) %>%
-    top_n(1, abs(loading)) %>%
-    ungroup() %>%
-    arrange(factor, abs(loading)) %>%
-    mutate(order = 1:length(levels(factor(loadings$capacity)))) %>%
-    select(factor, capacity, order)
-  
-  # add order to df
-  df <- df %>% left_join(order)
-  
-  # get bootstrapped means
-  df_boot <- df %>%
-    group_by(target, factor, capacity, order) %>%
-    multi_boot_standard("response", na.rm = T) %>%
-    ungroup() %>%
-    mutate(capacity = gsub("_", " ", capacity))
-    
-  # make plot
-  plot <- ggplot(df %>% 
-                   left_join(order) %>%
-                   mutate(capacity = gsub("_", " ", capacity)),
-                 aes(x = response, 
-                     y = reorder(capacity, order), 
-                     color = factor)) +
-    facet_grid(factor ~ target, scales = "free", space = "free") +
-    geom_point(alpha = 0.02) +
-    geom_errorbarh(data = df_boot, 
-                   aes(xmin = ci_lower, xmax = ci_upper, x = NULL),
-                   color = "black", height = 0) +
-    geom_point(data = df_boot,
-               aes(x = mean),
-               color = "black", size = 2) +
-    theme_bw() +
-    labs(x = "response", y = "",
-         subtitle = "Error bars are bootstrapped 95% confidence intervals") +
-    guides(color = "none")
-    # guides(color = guide_legend(override.aes = list(alpha = 1, size = 2)))
-  
-  return(plot)
-  
-}
-
+source("./scripts/plot_fun.R")
+source("./scripts/reten_fun.R")
 ```
 
 
 # Data preparation
 
 ```{r}
-# load in raw data
-d0 <- read.csv("./data/Baby mental life: Study 1_August 1, 2018_04.38.csv")
+# load in de-identified raw data
+d0 <- read.csv("./data/deidentified/baby_mental_life_s1_data.csv") %>% select(-X)
 ```
 
 ```{r}
@@ -321,7 +99,8 @@ question_key <- d0[1,] %>%
 ```{r}
 # rename questions
 d1 <- d0 %>%
-  filter(grepl("R_", ResponseId)) %>% # get rid of extra info in first two rows
+  # get rid of extra info in first two rows  
+  filter(!is.na(as.numeric(as.character(Q2)))) %>% 
   gather(question_qualtrics, response, -ResponseId) %>%
   left_join(question_key %>% select(question_qualtrics, question)) %>%
   select(-question_qualtrics) %>%
@@ -342,9 +121,9 @@ d2 <- d1 %>%
 ```{r}
 # recode variables & drop extraneous variables
 d3 <- d2 %>%
-  select(-c(DistributionChannel, EndDate, ExternalReference, Finished, IPAddress, 
-            starts_with("Location"), MTurkCode, payment, Progress, 
-            starts_with("Recipient"), RecordedDate, StartDate, Status, 
+  select(-c(EndDate, Finished, 
+            payment, Progress, 
+            RecordedDate, StartDate, Status, 
             timeEstimate, UserLanguage)) %>%
   mutate_at(vars(c(starts_with("target"), Age, ChildrenNumber, 
                    ChildrenOldestAge_fillIn1, ChildrenOldestAge_fillIn2, 
@@ -669,10 +448,10 @@ If we consider t-values > 2 to be "significant" and use the plot above to guide 
 - `target.Q:factor2`: The nonlinearity for MR2 is comparable to other factors. 
 - `target.L:factor3`: The linear increase is more dramatic (steeper slope) for MR3, compared to other factors. 
 - `target.Q:factor3`: The nonlinearity is less dramatic (flatter curve) for MR3, compared to other factors. 
-- `target.L:factor4`: The linear increase is more dramatic (steeper slope) for MR4, compared to other factors. 
-- `target.Q:factor4`: The nonlinearity is less dramatic (flatter curve) for MR4, compared to other factors. 
-- `target.L:factor5`: The linear increase is less dramatic (shallower slope) for MR5, compared to other factors. 
-- `target.Q:factor5`: The nonlinearity is more dramatic (curvier and/or concave instead of convex curve) for MR5, compared to other factors. 
+- `target.L:factor4`: The linear increase is less dramatic (shallower slope) for MR4, compared to other factors. 
+- `target.Q:factor4`: The nonlinearity is more dramatic (curvier and/or concanve instead of convex curve) for MR4, compared to other factors. 
+- `target.L:factor5`: The linear increase is more dramatic (steeper slope) for MR5, compared to other factors. 
+- `target.Q:factor5`: The nonlinearity is less dramatic (flatter curve) for MR5, compared to other factors. 
 
 ```{r, fig.width = 5, fig.asp = 1}
 itemsplot_fun(efa_all_bic, target = "all") + 

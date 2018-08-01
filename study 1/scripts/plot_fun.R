@@ -57,7 +57,7 @@ scoresplot_fun <- function(efa,
     data.frame() %>%
     rownames_to_column("subid") %>%
     mutate(ResponseId = gsub("_target.*$", "", subid),
-           target = gsub("R_.*_", "", subid)) %>%
+           target = gsub("^.*target", "target", subid)) %>%
     filter(target %in% target_list) %>%
     select(-subid) %>%
     gather(factor, score, -c(ResponseId, target)) %>%
@@ -128,7 +128,7 @@ itemsplot_fun <- function(efa,
   df <- d_all %>%
     rownames_to_column("subid") %>%
     mutate(ResponseId = gsub("_target.*$", "", subid),
-           target = gsub("R_.*_", "", subid)) %>%
+           target = gsub("^.*target", "target", subid)) %>%
     filter(target %in% target_list) %>%
     select(-subid) %>%
     gather(capacity, response, -c(ResponseId, target)) %>%
