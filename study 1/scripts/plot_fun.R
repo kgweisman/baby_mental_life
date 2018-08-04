@@ -2,13 +2,19 @@ library(tidyverse)
 library(psych)
 
 # make function for generating heatmap
-heatmap_fun <- function(efa){
+heatmap_fun <- function(efa, factor_names = NA){
+  
+  # get factor names
+  if(is.na(factor_names)){
+    factor_names <- paste("Factor", 1:efa$factors)
+  }
   
   # get factor loadings
   loadings <- efa$loadings[] %>%
     data.frame() %>%
     rownames_to_column("capacity") %>%
-    gather(factor, loading, -capacity)
+    gather(factor, loading, -capacity) %>%
+    mutate(factor = as.character(factor(factor, labels = factor_names)))
   
   # get fa.sort() order
   order <- loadings %>%
@@ -19,11 +25,22 @@ heatmap_fun <- function(efa){
     mutate(order = 1:length(levels(factor(loadings$capacity)))) %>%
     select(capacity, order)
   
+  # get percent shared variance explained
+  shared_var <- efa$Vaccounted %>%
+    data.frame() %>%
+    rownames_to_column("stat") %>%
+    filter(stat == "Proportion Explained") %>%
+    select(-stat) %>%
+    gather(factor, var) %>%
+    mutate(factor = as.character(factor(factor, labels = factor_names))) %>%
+    mutate(var = paste0(factor, "\n(", round(var, 2)*100, "% var.)"))
+  
   # make plot
   plot <- ggplot(loadings %>% 
                    left_join(order) %>%
+                   left_join(shared_var) %>%
                    mutate(capacity = gsub("_", " ", capacity)),
-                 aes(x = factor, 
+                 aes(x = var, 
                      y = reorder(capacity, order), 
                      fill = loading, 
                      label = format(round(loading, 2), nsmall = 2))) +
@@ -34,8 +51,8 @@ heatmap_fun <- function(efa){
                          guide = guide_colorbar(barheight = 20)) +
     theme_minimal() +
     scale_x_discrete(position = "top") +
-    labs(x = "", y = "")
-  
+    theme(axis.title = element_blank())
+
   return(plot)
   
 }

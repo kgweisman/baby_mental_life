@@ -285,6 +285,17 @@ Our primary analysis is an exploratory factor analysis (EFA) collapsing across a
 
 We planned to examine three factor retention protocols in order to determine how many factors to retain: Parallel analysis, minimizing BIC, and a set of preset criteria outlined in Weisman et al. (2017). Here we look at each solution in turn.
 
+## Rotation choices
+
+We planned to examine oblimin-rotated solutions (which allow factors to correlate), but you could examine other rotation options by selecting a different rotation type here.
+
+```{r}
+chosen_rot <- "oblimin" # preregistered: factors allowed to correlate
+# chosen_rot <- "varimax" # orthogonal: factors forced not to correlate
+# chosen_rot <- "none" # no rotation
+```
+
+
 ## Parallel analysis
 
 ### How many factors to retain?
@@ -297,29 +308,14 @@ reten_all_par <- reten_all_PA$nfact
 ### What are these factors?
 
 ```{r}
-efa_all_par <- fa(d_all, nfactors = reten_all_par, rotate = "oblimin",
+efa_all_par <- fa(d_all, nfactors = reten_all_par, rotate = chosen_rot,
                   scores = "tenBerge", impute = "median")
 ```
 
-```{r, fig.width = 3, fig.asp = 2}
+```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_all_par) + 
-  labs(title = "Parallel Analysis") #+
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 0.5, xmax = 1.5, ymin = 1.5, ymax = 21.5) +
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 1.5, xmax = 2.5, ymin = 25.5, ymax = 33.5) +
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 1.5, xmax = 2.5, ymin = 22.5, ymax = 24.5) +
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 2.5, xmax = 3.5, ymin = 33.5, ymax = 34.5) +
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 2.5, xmax = 3.5, ymin = 36.5, ymax = 54.5) +
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 3.5, xmax = 4.5, ymin = 54.5, ymax = 55.5) +
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 3.5, xmax = 4.5, ymin = 56.5, ymax = 57.5) +
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 3.5, xmax = 4.5, ymin = 58.5, ymax = 60.5)
+  labs(title = paste0("Parallel Analysis (rotation: ", chosen_rot, ")"),
+       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
 ```
 
 ### Which capacities are attributed to which targets?
@@ -384,27 +380,14 @@ reten_all_bic <- data.frame(reten_all_vss$vss.stats %>%
 ### What are these factors?
 
 ```{r}
-efa_all_bic <- fa(d_all, nfactors = reten_all_bic, rotate = "oblimin",
+efa_all_bic <- fa(d_all, nfactors = reten_all_bic, rotate = chosen_rot,
                   scores = "tenBerge", impute = "median")
 ```
 
-```{r, fig.width = 3, fig.asp = 2}
+```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_all_bic) + 
-  labs(title = "Minimizing BIC") #+
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 0.5, xmax = 1.5, ymin = 0.5, ymax = 21.5) +
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 1.5, xmax = 2.5, ymin = 22.5, ymax = 32.5) +
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 2.5, xmax = 3.5, ymin = 32.5, ymax = 48.5) +
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 3.5, xmax = 4.5, ymin = 49.5, ymax = 50.5) +
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 3.5, xmax = 4.5, ymin = 51.5, ymax = 52.5) +
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 4.5, xmax = 5.5, ymin = 52.5, ymax = 54.5) +
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 4.5, xmax = 5.5, ymin = 56.5, ymax = 60.5)
+  labs(title = paste0("Minimizing BIC (rotation: ", chosen_rot, ")"),
+       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
 ```
 
 ### Which capacities are attributed to which targets?
@@ -464,26 +447,21 @@ itemsplot_fun(efa_all_bic, target = "all") +
 ### How many factors to retain?
 
 ```{r}
-reten_all_k <- reten_fun(d_all, rot_type = "oblimin")
+reten_all_k <- reten_fun(d_all, rot_type = chosen_rot)
 print(paste("Preset criteria suggest retaining", reten_all_k, "factors"))
 ```
 
 ### What are these factors?
 
 ```{r}
-efa_all_k <- fa(d_all, nfactors = reten_all_k, rotate = "oblimin",
+efa_all_k <- fa(d_all, nfactors = reten_all_k, rotate = chosen_rot,
                   scores = "tenBerge", impute = "median")
 ```
 
-```{r, fig.width = 3, fig.asp = 2}
+```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_all_k) + 
-  labs(title = "Preset factor retention criteria\n(Weisman et al., 2017)") #+
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 0.5, xmax = 1.5, ymin = 0.5, ymax = 30.5) +
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 1.5, xmax = 2.5, ymin = 33.5, ymax = 60.5) +
-  # annotate("rect", fill = NA, color = "black", size = 0.5, 
-  #          xmin = 1.5, xmax = 2.5, ymin = 30.5, ymax = 31.5)
+  labs(title = paste0("Preset criteria (rotation: ", chosen_rot, ")"),
+       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
 ```
 
 ### Which capacities are attributed to which targets?
@@ -546,13 +524,14 @@ reten_00mo_par <- reten_00mo_PA$nfact
 ### What are these factors?
 
 ```{r}
-efa_00mo_par <- fa(d_00mo, nfactors = reten_00mo_par, rotate = "oblimin",
+efa_00mo_par <- fa(d_00mo, nfactors = reten_00mo_par, rotate = chosen_rot,
                   scores = "tenBerge", impute = "median")
 ```
 
-```{r, fig.width = 3, fig.asp = 2}
+```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_00mo_par) + 
-  labs(title = "Parallel Analysis")
+  labs(title = paste0("Parallel Analysis (rotation: ", chosen_rot, ")"),
+       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
 ```
 
 ### Which capacities are attributed to newborns?
@@ -578,13 +557,14 @@ reten_00mo_bic <- data.frame(reten_00mo_vss$vss.stats %>%
 ### What are these factors?
 
 ```{r}
-efa_00mo_bic <- fa(d_00mo, nfactors = reten_00mo_bic, rotate = "oblimin",
+efa_00mo_bic <- fa(d_00mo, nfactors = reten_00mo_bic, rotate = chosen_rot,
                    scores = "tenBerge", impute = "median")
 ```
 
-```{r, fig.width = 3, fig.asp = 2}
+```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_00mo_bic) + 
-  labs(title = "Minimizing BIC") 
+  labs(title = paste0("Minimizing BIC (rotation: ", chosen_rot, ")"),
+       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
 ```
 
 ### Which capacities are attributed to newborns?
@@ -600,20 +580,21 @@ itemsplot_fun(efa_00mo_bic, target = "newborns") +
 ### How many factors to retain?
 
 ```{r}
-reten_00mo_k <- reten_fun(d_00mo, rot_type = "oblimin")
+reten_00mo_k <- reten_fun(d_00mo, rot_type = chosen_rot)
 print(paste("Preset criteria suggest retaining", reten_00mo_k, "factors"))
 ```
 
 ### What are these factors?
 
 ```{r}
-efa_00mo_k <- fa(d_00mo, nfactors = reten_00mo_k, rotate = "oblimin",
+efa_00mo_k <- fa(d_00mo, nfactors = reten_00mo_k, rotate = chosen_rot,
                  scores = "tenBerge", impute = "median")
 ```
 
-```{r, fig.width = 3, fig.asp = 2}
+```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_00mo_k) + 
-  labs(title = "Preset factor retention criteria\n(Weisman et al., 2017)") 
+  labs(title = paste0("Preset criteria (rotation: ", chosen_rot, ")"),
+       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
 ```
 
 ### Which capacities are attributed to newborns?
@@ -640,14 +621,16 @@ reten_09mo_par <- reten_09mo_PA$nfact
 ### What are these factors?
 
 ```{r}
-efa_09mo_par <- fa(d_09mo, nfactors = reten_09mo_par, rotate = "oblimin",
+efa_09mo_par <- fa(d_09mo, nfactors = reten_09mo_par, rotate = chosen_rot,
                    scores = "tenBerge", impute = "median")
 ```
 
-```{r, fig.width = 3, fig.asp = 2}
+```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_09mo_par) + 
-  labs(title = "Parallel Analysis")
+  labs(title = paste0("Parallel analysis (rotation: ", chosen_rot, ")"),
+       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
 ```
+
 
 ### Which capacities are attributed to 9-month-olds?
 
@@ -672,13 +655,14 @@ reten_09mo_bic <- data.frame(reten_09mo_vss$vss.stats %>%
 ### What are these factors?
 
 ```{r}
-efa_09mo_bic <- fa(d_09mo, nfactors = reten_09mo_bic, rotate = "oblimin",
+efa_09mo_bic <- fa(d_09mo, nfactors = reten_09mo_bic, rotate = chosen_rot,
                    scores = "tenBerge", impute = "median")
 ```
 
-```{r, fig.width = 3, fig.asp = 2}
+```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_09mo_bic) + 
-  labs(title = "Minimizing BIC") 
+  labs(title = paste0("Minimizing BIC (rotation: ", chosen_rot, ")"),
+       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
 ```
 
 ### Which capacities are attributed to 9-month-olds?
@@ -694,20 +678,21 @@ itemsplot_fun(efa_09mo_bic, target = "9-month-olds") +
 ### How many factors to retain?
 
 ```{r}
-reten_09mo_k <- reten_fun(d_09mo, rot_type = "oblimin")
+reten_09mo_k <- reten_fun(d_09mo, rot_type = chosen_rot)
 print(paste("Preset criteria suggest retaining", reten_09mo_k, "factors"))
 ```
 
 ### What are these factors?
 
 ```{r}
-efa_09mo_k <- fa(d_09mo, nfactors = reten_09mo_k, rotate = "oblimin",
+efa_09mo_k <- fa(d_09mo, nfactors = reten_09mo_k, rotate = chosen_rot,
                  scores = "tenBerge", impute = "median")
 ```
 
-```{r, fig.width = 3, fig.asp = 2}
+```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_09mo_k) + 
-  labs(title = "Preset factor retention criteria\n(Weisman et al., 2017)") 
+  labs(title = paste0("Preset criteria (rotation: ", chosen_rot, ")"),
+       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
 ```
 
 ### Which capacities are attributed to 9-month-olds?
@@ -734,13 +719,14 @@ reten_60mo_par <- reten_60mo_PA$nfact
 ### What are these factors?
 
 ```{r}
-efa_60mo_par <- fa(d_60mo, nfactors = reten_60mo_par, rotate = "oblimin",
+efa_60mo_par <- fa(d_60mo, nfactors = reten_60mo_par, rotate = chosen_rot,
                    scores = "tenBerge", impute = "median")
 ```
 
-```{r, fig.width = 3, fig.asp = 2}
+```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_60mo_par) + 
-  labs(title = "Parallel Analysis")
+  labs(title = paste0("Parallel analysis (rotation: ", chosen_rot, ")"),
+       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
 ```
 
 ### Which capacities are attributed to 5-year-olds?
@@ -766,13 +752,14 @@ reten_60mo_bic <- data.frame(reten_60mo_vss$vss.stats %>%
 ### What are these factors?
 
 ```{r}
-efa_60mo_bic <- fa(d_60mo, nfactors = reten_60mo_bic, rotate = "oblimin",
+efa_60mo_bic <- fa(d_60mo, nfactors = reten_60mo_bic, rotate = chosen_rot,
                    scores = "tenBerge", impute = "median")
 ```
 
-```{r, fig.width = 3, fig.asp = 2}
+```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_60mo_bic) + 
-  labs(title = "Minimizing BIC") 
+  labs(title = paste0("Minimizing BIC (rotation: ", chosen_rot, ")"),
+       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
 ```
 
 ### Which capacities are attributed to 5-year-olds?
@@ -788,20 +775,21 @@ itemsplot_fun(efa_60mo_bic, target = "5-year-olds") +
 ### How many factors to retain?
 
 ```{r}
-reten_60mo_k <- reten_fun(d_60mo, rot_type = "oblimin")
+reten_60mo_k <- reten_fun(d_60mo, rot_type = chosen_rot)
 print(paste("Preset criteria suggest retaining", reten_60mo_k, "factors"))
 ```
 
 ### What are these factors?
 
 ```{r}
-efa_60mo_k <- fa(d_60mo, nfactors = reten_60mo_k, rotate = "oblimin",
+efa_60mo_k <- fa(d_60mo, nfactors = reten_60mo_k, rotate = chosen_rot,
                  scores = "tenBerge", impute = "median")
 ```
 
-```{r, fig.width = 3, fig.asp = 2}
+```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_60mo_k) + 
-  labs(title = "Preset factor retention criteria\n(Weisman et al., 2017)") 
+  labs(title = paste0("Preset criteria (rotation: ", chosen_rot, ")"),
+       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
 ```
 
 ### Which capacities are attributed to 5-year-olds?
