@@ -320,8 +320,8 @@ heatmap_fun(efa_all_par) +
 
 ### Which capacities are attributed to which targets?
 
-```{r, fig.width = 4, fig.asp = 0.5}
-scoresplot_fun(efa_all_par, target = "all") + 
+```{r, fig.width = 4, fig.asp = 0.6}
+scoresplot_fun(efa_all_par, target = "all (study 1)") + 
   labs(title = "Parallel Analysis") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
@@ -392,8 +392,8 @@ heatmap_fun(efa_all_bic) +
 
 ### Which capacities are attributed to which targets?
 
-```{r, fig.width = 5, fig.asp = 0.4}
-scoresplot_fun(efa_all_bic, target = "all") + 
+```{r, fig.width = 5, fig.asp = 0.6}
+scoresplot_fun(efa_all_bic, target = "all (study 1)") + 
   labs(title = "Minimizing BIC") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
@@ -467,7 +467,7 @@ heatmap_fun(efa_all_k) +
 ### Which capacities are attributed to which targets?
 
 ```{r}
-scoresplot_fun(efa_all_k, target = "all") + 
+scoresplot_fun(efa_all_k, target = "all (study 1)") + 
   labs(title = "Preset factor retention criteria (Weisman et al., 2017)")
 ```
 

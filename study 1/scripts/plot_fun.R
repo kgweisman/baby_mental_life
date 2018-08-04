@@ -59,15 +59,53 @@ heatmap_fun <- function(efa, factor_names = NA){
 
 # make function for plotting factor scores by factor, target
 scoresplot_fun <- function(efa, 
-                           target = c("all", "newborns", "9-month-olds", "5-year-olds")){
+                           target = c("all (study 1)", "all (study 2)",
+                                      "newborns", "4-day-olds", "1-month-olds",
+                                      "2-month-olds", "4-month-olds",
+                                      "6-month-olds", "9-month-olds",
+                                      "12-month-olds", "18-month-olds",
+                                      "2-year-olds", "3-year-olds",
+                                      "4-year-olds", "5-year-olds"), 
+                           highlight = "none", factor_names = NA){
   
   # generate list of targets
-  target_list <- case_when(
-    target == "all" ~ c("target00mo", "target09mo", "target60mo"),
-    target == "newborns" ~ "target00mo",
-    target == "9-month-olds" ~ "target09mo",
-    target == "5-year-olds" ~ "target60mo"
-  )
+  if(target == "all (study 1)"){
+    target_list <- c("target00mo", "target09mo", "target60mo")
+  } else if(target == "all (study 2)"){
+    target_list <- c("target00mo", "target00.1mo", "target01mo", "target02mo", 
+                     "target04mo", "target06mo", "target09mo", "target12mo", 
+                     "target18mo", "target24mo", "target36mo", "target48mo", 
+                     "target60mo")
+  } else {
+    target_list <- case_when(target,
+                             "newborns" ~ "target00mo",
+                             "4-day-olds" ~ "target00.1mo",
+                             "1-month-olds" ~ "target01mo",
+                             "2-month-olds" ~ "target02mo",
+                             "3-month-olds" ~ "target03mo",
+                             "6-month-olds" ~ "target06mo",
+                             "9-month-olds" ~ "target09mo",
+                             "12-month-olds" ~ "target12mo",
+                             "18-month-olds" ~ "target18mo",
+                             "2-year-olds" ~ "target24mo",
+                             "3-year-olds" ~ "target36mo",
+                             "4-year-olds" ~ "target48mo",
+                             "5-year-olds" ~ "target60mo")
+  }
+  
+  # generate list of targets to highlight
+  if(highlight == "none"){
+    highlight_list <- c()
+  } else if(highlight == "study 1"){
+    highlight_list <- c("target00mo", "target09mo", "target60mo")
+  } else {
+    highlight_list <- highlight
+  }
+  
+  # get factor names
+  if(is.na(factor_names)){
+    factor_names <- paste("Factor", 1:efa$factors)
+  }
   
   # make usable dataframe
   df <- efa$scores[] %>%
@@ -78,22 +116,26 @@ scoresplot_fun <- function(efa,
     filter(target %in% target_list) %>%
     select(-subid) %>%
     gather(factor, score, -c(ResponseId, target)) %>%
-    mutate(target = recode_factor(target,
-                                  "target00mo" = "newborns",
-                                  "target09mo" = "9-month-olds",
-                                  "target60mo" = "5-year-olds"))
+    mutate(highlight = factor(ifelse(target %in% highlight_list,
+                                     "highlight", "no_highlight"),
+                              levels = c("no_highlight", "highlight")),
+           factor = as.character(factor(factor, labels = factor_names)))
   
   # get bootstrapped means
   df_boot <- df %>%
     group_by(target, factor) %>%
     multi_boot_standard("score", na.rm = T) %>%
-    ungroup()
+    ungroup() %>%
+    mutate(highlight = factor(ifelse(target %in% highlight_list,
+                                     "highlight", "no_highlight"),
+                              levels = c("no_highlight", "highlight")))
   
-  # get first items for each factor
+  # get first items for subtitle
   first_items <- efa$loadings[] %>%
     data.frame() %>%
     rownames_to_column("capacity") %>%
     gather(factor, loading, -capacity) %>%
+    mutate(factor = as.character(factor(factor, labels = factor_names))) %>%
     group_by(factor) %>%
     top_n(3, abs(loading)) %>%
     mutate(capacity = gsub("_", " ", capacity),
@@ -101,28 +143,59 @@ scoresplot_fun <- function(efa,
            cap_list = paste0(cap_list, "...")) %>%
     ungroup() %>%
     select(-capacity, -loading) %>%
-    distinct()
+    distinct() %>%
+    arrange(factor)
+  
+  # get percent shared variance explained
+  shared_var <- efa$Vaccounted %>%
+    data.frame() %>%
+    rownames_to_column("stat") %>%
+    filter(stat == "Proportion Explained") %>%
+    select(-stat) %>%
+    gather(factor, var) %>%
+    mutate(factor = as.character(factor(factor, labels = factor_names)),
+           var = paste0(round(var, 2)*100, "% shared variance"))
+  
+  subtitle <- c()
+  for(i in 1:nrow(first_items)){
+    subtitle <- paste0(subtitle,
+                       first_items[i,1], 
+                       " (", shared_var[i,2], "): ",
+                       first_items[i,2], 
+                       "\n")
+  }
+  subtitle <- gsub("\\n$", "", subtitle)
+  
+  # get colors for lines
+  line_colors <- c("#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3", "#a6d854",
+                   "#ffd92f", "#e5c494", "#b3b3b3") # Set2 from colorbrewer
+  line_colors <- line_colors[1:nrow(shared_var)]
   
   # make plot
-  plot <- ggplot(df,
-                 aes(x = target, 
-                     y = score, 
-                     color = factor)) +
-    facet_grid(~ factor) +
-    geom_path(aes(group = ResponseId), alpha = 0.1) +
-    geom_path(data = df_boot,
-              aes(y = mean, group = factor), color = "black", lty = 2) +
-    geom_pointrange(data = df_boot,
-                    aes(y = mean, ymin = ci_lower, ymax = ci_upper),
-                    color = "black", fatten = 0.75) +
-    geom_text(data = first_items,
-              aes(label = gsub('(.{1,30})(\\s|$)', '\\1\n', cap_list)),
-              x = 0.5, y = max(df$score), size = 3, color = "black",
-              hjust = 0, vjust = 1) +
+  plot <- ggplot(df, aes(x = target, y = score, fill = factor)) +
+    facet_grid(cols = vars(factor)) +
+    geom_hline(yintercept = 0, lty = 2, color = "darkgray") +
+    geom_path(aes(color = factor, group = ResponseId), alpha = 0.1) +
+    geom_path(data = df_boot, 
+              aes(y = mean, group = factor), 
+              lty = 2, color = "black") +
+    geom_errorbar(data = df_boot,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper, 
+                      color = highlight),
+                  width = 0) +
+    geom_point(data = df_boot,
+               aes(y = mean, 
+                   color = highlight, size = highlight)) +
+    scale_fill_brewer(palette = "Set1") +
+    scale_color_manual(values = c(line_colors, "black", "#984ea3")) +
+    scale_size_manual(values = c(0.75, 2)) +
     theme_bw() +
-    labs(x = "target", y = "factor score",
-         subtitle = "Error bars are bootstrapped 95% confidence intervals") +
-    guides(color = "none")
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+    labs(x = "target age",
+         y = "factor score",
+         subtitle = subtitle,
+         caption = "Error bars are bootstrapped 95% confidence intervals") +
+    guides(fill = "none", color = "none", size = "none")
   # guides(color = guide_legend(override.aes = list(alpha = 1, size = 1)))
   
   return(plot)
