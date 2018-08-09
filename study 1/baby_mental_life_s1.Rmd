@@ -16,7 +16,9 @@ knitr::opts_chunk$set(fig.width = 3, fig.asp = 0.67)
 
 Our planned sample was 300 participants, and we anticipated that roughly 85-90% of recruited participants would pass all of our attention checks, so we initially recruited 342 participants (on the idea that ~87.5% of 342 ~ 300 participants; note that for administrative purposes we need to recuit participants in batches that were divisible by 9). After filtering out participants who failed at least one of our attention checks, we ended up retaining only 80% of participants, so we recruited an additional 36 participants for a total of 378 people recruited (on the idea that ~80% of 378 ~ 300 participants; note that for administrative purposes we need to recuit participants in batches that were divisible by 9). In a slight deviation from our preregistered recruitment plan, we limited these additional 36 participants to women, because we had an unexpectedly large imbalance of men to women. 
 
-In the end, we ended up with a sample of 301 participants who passed our attention checks.
+**UPDATE: On 2018-08-09, KW discovered that there were many repeating GPS locations, a symptom of a recent outbreak of bots on MTurk. As of this date, these data have excluded any participants where there is another participant with an identical set of GPS coordinates as recorded by Qualtrics. This excluded an additional 76 participants (25%).**
+
+In the end, we ended up with a sample of 301 participants who passed our attention checks, 225 of whom came from unique GPS coordinates.
 
 Each participant assessed children's mental capacities at 3 target ages: newborns, 9-month-olds, and 5-year-olds. For each target, they rated 60 mental capacities on a scale from 0 (not at all capable) to 100 (completely capable). 
 
@@ -101,7 +103,7 @@ question_key <- d0[1,] %>%
 d1 <- d0 %>%
   # get rid of extra info in first two rows  
   filter(!is.na(as.numeric(as.character(Q2)))) %>% 
-  gather(question_qualtrics, response, -ResponseId) %>%
+  gather(question_qualtrics, response, -c(ResponseId, duplicateGPS)) %>%
   left_join(question_key %>% select(question_qualtrics, question)) %>%
   select(-question_qualtrics) %>%
   spread(question, response)
@@ -119,8 +121,16 @@ d2 <- d1 %>%
 ```
 
 ```{r}
-# recode variables & drop extraneous variables
+# remove people with another identical set of GPS coordinates among people who passed attention checks
 d3 <- d2 %>%
+  filter(duplicateGPS == F) %>%
+  select(-duplicateGPS)
+```
+
+
+```{r}
+# recode variables & drop extraneous variables
+d4 <- d3 %>%
   select(-c(EndDate, Finished, 
             payment, Progress, 
             RecordedDate, StartDate, Status, 
@@ -156,7 +166,7 @@ d3 <- d2 %>%
 ```{r}
 # make useful datasets
 # final dataset with all measured variables
-d <- d3 %>% distinct()
+d <- d4 %>% distinct()
 
 # demographic information
 d_demo <- d %>% 
