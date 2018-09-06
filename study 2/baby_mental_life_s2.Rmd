@@ -1,0 +1,793 @@
+---
+title: "Baby Mental Life: Study 2"
+date: 2018-09-05
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+---
+
+"Baby Mental Life: Study 2" was conducted on MTurk on 2018-08-04.
+
+Our planned sample was 300 participants, and we anticipated that roughly 80% of recruited participants would pass all of our attention checks, so we initially recruited 378 participants (on the idea that ~80% of 378 ~ 300 participants; note that for administrative purposes we need to recuit participants in batches that were divisible by 9). After filtering out participants who failed at least one of our attention checks, we ended up retaining fewer than 300 participants, so we recruited an additional 16 participants for a total of 394 people recruited. At each stage, we recruited women and men through separate studies, in hopes of acquiring a roughly equal split between genders.
+
+In the end, we ended up with a sample of 304 participants who passed our attention checks, 237 of whom came from unique GPS coordinates.
+
+**For this first pass, these data _exclude_ participants where there is another participant with an identical set of GPS coordinates as recorded by Qualtrics.**
+
+Each participant assessed children's mental capacities at 13 target ages between the ages of 0 and 5 years. For each target, they rated 20 mental capacities on a scale from 0 (not at all capable) to 100 (completely capable). 
+
+For more details about the study, see our preregistration [here](https://osf.io/j72dg/). 
+
+```{r}
+# load required libraries
+library(tidyverse)
+library(langcog) # source: https://github.com/langcog/langcog-package
+library(psych)
+library(lme4)
+
+# set theme for ggplots
+theme_set(theme_bw())
+```
+
+```{r}
+# run source code (extra home-made functions)
+source("./scripts/max_factors_efa.R")
+source("./scripts/plot_fun.R")
+source("./scripts/reten_fun.R")
+```
+
+
+# Study 1 EFA
+
+```{r}
+# load in EFA results from study 1
+efa_S1 <- readRDS("../study 1/s1_efa.rds")
+```
+
+
+# Data preparation
+
+```{r}
+# load in de-identified raw data
+d0 <- read.csv("./data/deidentified/baby_mental_life_s2_data.csv") %>% select(-X)
+```
+
+```{r}
+# make question key
+question_key <- d0[1,] %>%
+  t() %>%
+  data.frame() %>%
+  rownames_to_column("question_qualtrics") %>%
+  rename("question_text" = X1) %>%
+  mutate(question = recode(question_qualtrics,
+                           "Duration..in.seconds." = "Duration",
+                           "Q2" = "Age",
+                           "Q3" = "GenderSex",
+                           "Q3_3_TEXT" = "GenderSex_fillIn",
+                           "Q4" = "EnglishProf",
+                           "Q5" = "FirstLang",
+                           "Q5_2_TEXT" = "FirstLang_fillIn",
+                           "Q40" = "RaceEthnicity",
+                           "Q40_10_TEXT" = "RaceEthnicity_fillIn",
+                           "Q41" = "Education",
+                           "Q42" = "Income",
+                           "Q43" = "MaritalStatus",
+                           "Q43_6_TEXT" = "MaritalStatus_fillIn",
+                           "Q44" = "HouseholdSize",
+                           "Q45" = "Parent",
+                           "Q47" = "ChildrenNumber",
+                           "Q48" = "ChildrenYoungestAge",
+                           "Q48_1_TEXT" = "ChildrenYoungestAge_fillIn1",
+                           "Q48_2_TEXT" = "ChildrenYoungestAge_fillIn2",
+                           "Q49" = "ChildrenOldestAge",
+                           "Q49_1_TEXT" = "ChildrenOldestAge_fillIn1",
+                           "Q49_2_TEXT" = "ChildrenOldestAge_fillIn2",
+                           "Q50" = "Attention",
+                           "Q51" = "Comments",
+                           .default = question_qualtrics),
+         question = case_when(grepl("the following questions", question_text) ~
+                                gsub("^.*extent is a ", "", question_text),
+                              TRUE ~ question),
+         question = case_when(grepl("capable of...", question_text) ~
+                                gsub("capable of... ", "", tolower(question)),
+                              TRUE ~ question),
+         question = gsub(" ", "_", question),
+         question = gsub("'", "", question),
+         question = gsub("5-year-old_-_", "target60mo_", question),
+         question = gsub("4-year-old_-_", "target48mo_", question),
+         question = gsub("3-year-old_-_", "target36mo_", question),
+         question = gsub("2-year-old_-_", "target24mo_", question),
+         question = gsub("18-month-old_-_", "target18mo_", question),
+         question = gsub("12-month-old_-_", "target12mo_", question),
+         question = gsub("9-month-old_-_", "target09mo_", question),
+         question = gsub("6-month-old_-_", "target06mo_", question),
+         question = gsub("4-month-old_-_", "target04mo_", question),
+         question = gsub("3-month-old_-_", "target03mo_", question),
+         question = gsub("2-month-old_-_", "target02mo_", question),
+         question = gsub("1-month-old_-_", "target01mo_", question),
+         question = gsub("4-day-old_-_", "target0Xmo_", question),
+         question = gsub("newborn_-_", "target00mo_", question)) %>%
+  mutate(question = gsub("-", "_", question),
+         question = gsub(" \\(for_example,_smooth,_rough\\)", "", question))
+```
+
+```{r}
+# rename questions
+d1 <- d0 %>%
+  # get rid of extra info in first two rows  
+  filter(!is.na(as.numeric(as.character(Q2)))) %>% 
+  gather(question_qualtrics, response, -c(ResponseId, duplicateGPS)) %>%
+  left_join(question_key %>% select(question_qualtrics, question)) %>%
+  select(-question_qualtrics) %>%
+  spread(question, response)
+```
+
+```{r}
+# implement inclusion/exclusion criteria
+d2 <- d1 %>%
+  filter(Age >= 18, Age <= 45,
+         EnglishProf %in% c("Advanced", "Superior"),
+         `target04mo_choose_seventy_one` == 71,
+         `target0Xmo_please_select_ninety_two` == 92,
+         `target12mo_set_this_answer_to_zero` == 0,
+         `target36mo_move_the_slider_to_fifty` == 50,
+         Attention == "Yes")
+```
+
+```{r}
+# remove people with another identical set of GPS coordinates among people who passed attention checks
+d3 <- d2 %>%
+  filter(duplicateGPS == F) %>%
+  select(-duplicateGPS)
+```
+
+
+```{r}
+# recode variables & drop extraneous variables
+d4 <- d3 %>%
+  select(-c(EndDate, Finished, 
+            payment, Progress, 
+            RecordedDate, StartDate, Status, 
+            timeEstimate, UserLanguage)) %>%
+  mutate_at(vars(c(starts_with("target"), Age, ChildrenNumber, 
+                   ChildrenOldestAge_fillIn1, ChildrenOldestAge_fillIn2, 
+                   ChildrenYoungestAge_fillIn1, ChildrenYoungestAge_fillIn2,
+                   Duration, HouseholdSize)),
+            funs(as.numeric(.))) %>%
+  mutate(Education = factor(Education,
+                            levels = c("No schooling completed", 
+                                       "Nursery school to 8th grade", 
+                                       "Some high school, no diploma", 
+                                       "High school graduate, diploma or equivalent (including GED)", 
+                                       "Some college credit, no degree", 
+                                       "Trade school, technical school, or vocational school",
+                                       "Associate's degree (for example, AA, AS)",
+                                       "Bachelor's degree (for example, BA, BS)",
+                                       "Master's degree (for example, MA, MS)",
+                                       "Doctor or professional degree (for example, PhD, JD, MD, MBA)")),
+         Income = factor(Income,
+                         levels = c("$5,001 - 15,000", 
+                                    "$15,001 - 30,000", 
+                                    "$30,001 - 60,000",
+                                    "$60,001 - 90,000",
+                                    "$90,001 - 150,000",
+                                    "Greater than $150,000",
+                                    "Prefer not to say")),
+         Parent = factor(Parent,
+                         levels = c("No", "Yes")))
+```
+
+```{r}
+# make useful datasets
+# final dataset with all measured variables
+d <- d4 %>% distinct()
+
+# demographic information
+d_demo <- d %>% 
+  select(ResponseId, Duration,
+         Age, starts_with("GenderSex"), starts_with("RaceEthnicity"),
+         starts_with("FirstLang"),
+         Education, Income, HouseholdSize,
+         starts_with("MaritalStatus"),
+         Parent, starts_with("Children"), 
+         Comments) %>%
+  mutate(RaceEthnicity_collapse = ifelse(grepl(",([A-Za-z])", RaceEthnicity),
+                                         "Multiple", RaceEthnicity)) %>%
+  mutate(ChildrenOldestAge_collapse = case_when(
+    ChildrenOldestAge %in% c("My oldest child has not yet been born (I am/my partner is pregnant)", "My oldest child is deceased", "Prefer not to say") ~ ChildrenOldestAge,
+    ChildrenOldestAge == "In months:" ~ 
+      ifelse(as.numeric(ChildrenOldestAge_fillIn1)/12 < 1,
+             "< 1 year",
+             ifelse(as.numeric(ChildrenOldestAge_fillIn1)/12 < 3, 
+                    "1 - 3 years",
+                    ifelse(as.numeric(ChildrenOldestAge_fillIn1)/12 < 5, 
+                           "3 - 5 years",
+                           ifelse(as.numeric(ChildrenOldestAge_fillIn1)/12 < 10, 
+                                  "5 - 10 years",
+                                  ifelse(as.numeric(ChildrenOldestAge_fillIn1)/12 < 18, 
+                                         "10 - 18 years",
+                                         "> 18 years"))))),
+    ChildrenOldestAge == "In years:" ~
+      ifelse(as.numeric(ChildrenOldestAge_fillIn2) < 1,
+             "< 1 year",
+             ifelse(as.numeric(ChildrenOldestAge_fillIn2) < 3, 
+                    "1 - 3 years",
+                    ifelse(as.numeric(ChildrenOldestAge_fillIn2) < 5, 
+                           "3 - 5 years",
+                           ifelse(as.numeric(ChildrenOldestAge_fillIn2) < 10, 
+                                  "5 - 10 years",
+                                  ifelse(as.numeric(ChildrenOldestAge_fillIn2) < 18, 
+                                         "10 - 18 years",
+                                         "> 18 years"))))),
+    TRUE ~ "NA")) %>%
+  mutate(ChildrenOldestAge_collapse = 
+           factor(ChildrenOldestAge_collapse,
+                  levels = c("My oldest child has not yet been born (I am/my partner is pregnant)",
+                             "< 1 year",
+                             "1 - 3 years",
+                             "3 - 5 years",
+                             "5 - 10 years",
+                             "10 - 18 years",
+                             "> 18 years",
+                             "My oldest child is deceased",
+                             "Prefer not to say"))) %>%
+  mutate(ChildrenYoungestAge_collapse = case_when(
+    ChildrenYoungestAge %in% c("My youngest child has not yet been born (I am/my partner is pregnant)", "My youngest child is deceased", "Prefer not to say") ~ ChildrenYoungestAge,
+    ChildrenYoungestAge == "In months:" ~ 
+      ifelse(as.numeric(ChildrenYoungestAge_fillIn1)/12 < 1,
+             "< 1 year",
+             ifelse(as.numeric(ChildrenYoungestAge_fillIn1)/12 < 3, 
+                    "1 - 3 years",
+                    ifelse(as.numeric(ChildrenYoungestAge_fillIn1)/12 < 5, 
+                           "3 - 5 years",
+                           ifelse(as.numeric(ChildrenYoungestAge_fillIn1)/12 < 10, 
+                                  "5 - 10 years",
+                                  ifelse(as.numeric(ChildrenYoungestAge_fillIn1)/12 < 18, 
+                                         "10 - 18 years",
+                                         "> 18 years"))))),
+    ChildrenYoungestAge == "In years:" ~
+      ifelse(as.numeric(ChildrenYoungestAge_fillIn2) < 1,
+             "< 1 year",
+             ifelse(as.numeric(ChildrenYoungestAge_fillIn2) < 3, 
+                    "1 - 3 years",
+                    ifelse(as.numeric(ChildrenYoungestAge_fillIn2) < 5, 
+                           "3 - 5 years",
+                           ifelse(as.numeric(ChildrenYoungestAge_fillIn2) < 10, 
+                                  "5 - 10 years",
+                                  ifelse(as.numeric(ChildrenYoungestAge_fillIn2) < 18, 
+                                         "10 - 18 years",
+                                         "> 18 years"))))),
+    TRUE ~ "NA")) %>%
+  mutate(ChildrenYoungestAge_collapse = 
+           factor(ChildrenYoungestAge_collapse,
+                  levels = c("My Youngest child has not yet been born (I am/my partner is pregnant)",
+                             "< 1 year",
+                             "1 - 3 years",
+                             "3 - 5 years",
+                             "5 - 10 years",
+                             "10 - 18 years",
+                             "> 18 years",
+                             "My Youngest child is deceased",
+                             "Prefer not to say")))  
+# all assessments of ALL TARGETS, RepsonseId as rownames
+d_all <- d %>% 
+  select(ResponseId, starts_with("target"), 
+         -c(contains("seventy"), contains("fifty"),
+            contains("zero"), contains("ninety"), contains("please"))) %>%
+  gather(question, response, -ResponseId) %>%
+  mutate(target = gsub("_.*$", "", question),
+         capacity = gsub("target..mo_", "", question),
+         subid = paste(ResponseId, target, sep = "_")) %>%
+  select(-ResponseId, -question, -target) %>%
+  spread(capacity, response) %>%
+  column_to_rownames("subid")
+```
+
+
+# EFA
+
+To test H1, we planned to conduct an exploratory factor analysis (EFA) collapsing across all 13 target characters (and treating an individual participant's responses to each character as if they were independent data points) - see the preregistration for more details.  
+
+As with Study 1, we planned to examine three factor retention protocols in order to determine how many factors to retain: Parallel analysis, minimizing BIC, and a set of preset criteria outlined in Weisman et al. (2017). Here we look at each solution in turn.
+
+We predicted that we'd see a similar factor structure to that found in Study 1.
+
+
+## Rotation choices
+
+We planned to examine oblimin-rotated solutions (which allow factors to correlate), but you could examine other rotation options by selecting a different rotation type here.
+
+```{r}
+chosen_rot <- "oblimin" # preregistered: factors allowed to correlate
+# chosen_rot <- "varimax" # orthogonal: factors forced not to correlate
+# chosen_rot <- "none" # no rotation
+```
+
+
+## Parallel analysis
+
+### How many factors to retain?
+
+```{r}
+reten_all_PA <- fa.parallel(d_all, plot = F); reten_all_PA
+reten_all_par <- reten_all_PA$nfact
+```
+
+### What are these factors?
+
+```{r}
+efa_all_par <- fa(d_all, nfactors = reten_all_par, rotate = chosen_rot,
+                  scores = "tenBerge", impute = "median")
+```
+
+```{r, fig.width = 4, fig.asp = 0.7}
+heatmap_fun(efa_all_par) + 
+  labs(title = paste0("Parallel Analysis (rotation: ", chosen_rot, ")"),
+       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+```
+
+These factors look extremely similar to what we saw in Study 1:
+
+```{r, fig.width = 4, fig.asp = 1.5}
+heatmap_fun(efa_S1) + 
+  labs(title = paste0("STUDY 1 Parallel Analysis (rotation: ", chosen_rot, ")"),
+       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+```
+
+I (Kara) would say that H1 is strongly supported.
+
+
+### Which capacities are attributed to which targets?
+
+We could look at factor scores using the Study 2 EFA to see which capacities were attributed to which targets. This is not the primary way we planned to investigate this - this was listed as a "follow-up analysis" - but I'm putting it here so that it's in close proximity to the EFA results for ease of interpretation.
+
+#### Age as numeric (raw)
+
+```{r, fig.width = 4, fig.asp = 0.5}
+scoresplot_fun(efa_all_par, target = "all (study 2)", 
+               target_encoding = "numeric") +
+  scale_x_continuous(breaks = seq(0, 60, 12)) +
+  labs(title = "Parallel Analysis") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
+
+```{r, include = F}
+# Here's a multilevel linear regression on these factor scores, with random intercepts and slopes (for target and factor) by participant. Target is coded with linear and quadratic contrasts, and factor is effect-coded for comparison with the grand mean (with the last factor as the base, -1):
+
+# efa_all_par_scores <- efa_all_par$scores[] %>%
+#   data.frame() %>%
+#   rownames_to_column("subid") %>%
+#   mutate(target = gsub("^.*_target", "target", subid),
+#          ResponseId = gsub("_target.*$", "", subid),
+#          target_num = recode(target,
+#                              "target00mo" = 0,
+#                              "target0Xmo" = round(4/30, 3),
+#                              "target01mo" = 1,
+#                              "target02mo" = 2,
+#                              "target04mo" = 4,
+#                              "target06mo" = 6,
+#                              "target09mo" = 9,
+#                              "target12mo" = 12,
+#                              "target18mo" = 18,
+#                              "target24mo" = 24,
+#                              "target36mo" = 36,
+#                              "target48mo" = 48,
+#                              "target60mo" = 60),
+#          target_ord = recode_factor(target,
+#                                     "target00mo" = "newborns",
+#                                     "target0Xmo" = "4-day-olds",
+#                                     "target01mo" = "1-month-olds",
+#                                     "target02mo" = "2-month-olds",
+#                                     "target04mo" = "4-month-olds",
+#                                     "target06mo" = "6-month-olds",
+#                                     "target09mo" = "9-month-olds",
+#                                     "target12mo" = "12-month-olds",
+#                                     "target18mo" = "18-month-olds",
+#                                     "target24mo" = "2-year-olds",
+#                                     "target36mo" = "3-year-olds",
+#                                     "target48mo" = "4-year-olds",
+#                                     "target60mo" = "5-year-olds")) %>%
+#   select(-subid, -target) %>%
+#   gather(factor, score, -starts_with("target"), -ResponseId) %>%
+#   mutate_at(vars(factor), funs(factor))
+# 
+# contrasts(efa_all_par_scores$factor) <- contr.sum(reten_all_par)
+
+# r_all_par <- lmer(score ~ target_num * factor 
+#                   + (target_num + factor | ResponseId),
+#                   efa_all_par_scores)
+# summary(r_all_par, corr = F)
+
+# There's a problem here: "Model is nearly unidentifiable: very large eigenvalue." We need to come back to consider this more carefully.
+```
+
+```{r}
+# adding polynomial effects
+# r_all_par_poly <- lmer(score ~ poly(target_num, 3) * factor
+#                        + (poly(target_num, 3) + factor | ResponseId),
+#                        efa_all_par_scores,
+#                        control = glmerControl(optimizer = "bobyqa"))
+# summary(r_all_par_poly, corr = F)
+```
+
+#### Age as numeric (square-root-transformed)
+
+```{r, fig.width = 4, fig.asp = 0.5}
+scoresplot_fun(efa_all_par, target = "all (study 2)", 
+               target_encoding = "numeric") +
+  scale_x_continuous(breaks = seq(0, 60, 12), trans = "sqrt") +
+  labs(title = "Parallel Analysis", 
+       x = "age after square-root transformation (months)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
+#### Age as ordinal
+
+```{r, fig.width = 4, fig.asp = 0.5}
+scoresplot_fun(efa_all_par, target = "all (study 2)", 
+               target_encoding = "ordinal") +
+  labs(title = "Parallel Analysis", 
+       x = "age (ordinal)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
+And here's a close look at all of the raw data (color-coded according to the Study 2 EFA results):
+
+```{r, fig.width = 8, fig.asp = 0.4}
+itemsplot_fun(efa_all_par, target = "all (study 2)") + 
+  labs(title = "Parallel Analysis")
+```
+
+```{r, fig.width = 6, fig.asp = 0.7}
+d_all %>%
+  rownames_to_column("subid_target") %>%
+  mutate(subid = gsub("_.*$", "", subid_target),
+         target = gsub("^.*_", "", subid_target),
+         target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = 4/30,
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  select(-c(subid_target, target)) %>%
+  gather(capacity, response, -c(subid, starts_with("target"))) %>%
+  full_join(efa_all_par$loadings[] %>%
+              data.frame() %>%
+              rownames_to_column("capacity") %>%
+              gather(factor, loading, -capacity) %>%
+              group_by(capacity) %>%
+              top_n(1, abs(loading)) %>%
+              ungroup() %>%
+              arrange(factor, desc(abs(loading))) %>%
+              mutate(order = 1:20) %>%
+              select(capacity, factor, order)) %>%
+  ggplot(aes(x = target_ord, y = response, color = factor)) +
+  facet_wrap(~ reorder(capacity, order)) +
+  geom_line(aes(group = subid), alpha = 0.1) +
+  geom_smooth(aes(group = capacity),
+              method = "lm", formula = "y ~ poly(x, 3)",
+              color = "black") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  guides(color = guide_legend(override.aes = list(alpha = 1)))
+```
+
+We'll skip regression analyses for now.
+
+
+## Minimizing BIC
+
+### How many factors to retain?
+
+```{r}
+reten_all_vss <- VSS(d_all, plot = F); reten_all_vss
+reten_all_bic <- data.frame(reten_all_vss$vss.stats %>%
+  rownames_to_column("nfactors") %>%
+  top_n(-1, BIC) %>%
+  select(nfactors))$nfactors %>% as.numeric()
+```
+
+### What are these factors?
+
+```{r}
+efa_all_bic <- fa(d_all, nfactors = reten_all_bic, rotate = chosen_rot,
+                  scores = "tenBerge", impute = "median")
+```
+
+```{r, fig.width = 4, fig.asp = 0.7}
+heatmap_fun(efa_all_bic) + 
+  labs(title = paste0("Minimizing BIC (rotation: ", chosen_rot, ")"),
+       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+```
+
+A more complex picture, but the first 4 factors look similar to what we get through parallel analysis. (I think something similar happened with Study 1, but we should go back and compare.)
+
+### Which capacities are attributed to which targets?
+
+```{r, fig.width = 4, fig.asp = 0.7}
+scoresplot_fun(efa_all_bic, target = "all (study 2)") + 
+  labs(title = "Minimizing BIC") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
+We'll skip regression analyses and other plots for now.
+
+
+## Preset retention criteria
+
+### How many factors to retain?
+
+```{r}
+reten_all_k <- reten_fun(d_all, rot_type = chosen_rot)
+print(paste("Preset criteria suggest retaining", reten_all_k, "factors"))
+```
+
+This gives the same solution as parallel analysis - 4 factors :)
+
+
+# Projecting into Study 1 factor space
+
+**I (Kara) made a big mistake in thinking through this: I thought we could project a 20-variable dataset into a 60-variable dataset using the `predict.psych()` function, but we can't!**
+
+I've tried to hack together a way to do this, by replacing all missing values at random (either within the full range of the scale, or around the midpoint, or near 0) - but I haven't gotten anything to work. As you can see below (replacing missing values at random between 0-5), you see slight increases across all factors, and the most dramatic increase for Factor 4 - but I think this is because that factor is least well-defined in the Study 1 EFA solution?  I think we need to focus on analyzing factor scores from our Study 2 EFA. I'm sorry for this mistake!
+
+```{r}
+extra_var <- rownames(efa_S1$loadings)[!rownames(efa_S1$loadings) %in% rownames(efa_all_par$loadings)]
+
+temp <- d_all %>%
+  rownames_to_column("subid") %>%
+  mutate(being_afraid_of_somebody = round(runif(3081, 0, 5)), 
+         being_angry_at_somebody = round(runif(3081, 0, 5)),
+         being_aware_of_things = round(runif(3081, 0, 5)), 
+         being_comforted_by_physical_touch = round(runif(3081, 0, 5)),
+         calming_themselves_down = round(runif(3081, 0, 5)), 
+         detecting_danger = round(runif(3081, 0, 5)), 
+         feeling_annoyed = round(runif(3081, 0, 5)), 
+         feeling_bored = round(runif(3081, 0, 5)), 
+         feeling_calm = round(runif(3081, 0, 5)),
+         feeling_confused = round(runif(3081, 0, 5)), 
+         feeling_embarrassed = round(runif(3081, 0, 5)), 
+         feeling_guilty = round(runif(3081, 0, 5)),
+         feeling_hopeless = round(runif(3081, 0, 5)), 
+         feeling_loved = round(runif(3081, 0, 5)), 
+         feeling_neglected = round(runif(3081, 0, 5)),
+         feeling_pleasure = round(runif(3081, 0, 5)), 
+         feeling_pride = round(runif(3081, 0, 5)), 
+         feeling_sad = round(runif(3081, 0, 5)),
+         feeling_safe = round(runif(3081, 0, 5)), 
+         feeling_scared = round(runif(3081, 0, 5)), 
+         feeling_textures = round(runif(3081, 0, 5)),
+         feeling_thirsty = round(runif(3081, 0, 5)), 
+         feeling_too_hot_or_too_cold = round(runif(3081, 0, 5)),
+         feeling_worried = round(runif(3081, 0, 5)), 
+         focusing_on_a_goal = round(runif(3081, 0, 5)), 
+         getting_angry = round(runif(3081, 0, 5)),
+         getting_hurt_feelings = round(runif(3081, 0, 5)), 
+         getting_pleasure_from_music = round(runif(3081, 0, 5)),
+         having_goals = round(runif(3081, 0, 5)), 
+         having_thoughts = round(runif(3081, 0, 5)), 
+         having_wants_and_desires = round(runif(3081, 0, 5)),
+         imagining_things = round(runif(3081, 0, 5)), 
+         listening_to_somebody = round(runif(3081, 0, 5)), 
+         making_choices = round(runif(3081, 0, 5)),
+         recognizing_others_emotions = round(runif(3081, 0, 5)), 
+         recognizing_somebody_else = round(runif(3081, 0, 5)),
+         remembering_things = round(runif(3081, 0, 5)), 
+         seeing = round(runif(3081, 0, 5)), 
+         thinking_before_they_act = round(runif(3081, 0, 5)),
+         understanding_what_somebody_else_is_thinking = round(runif(3081, 0, 5))) %>%
+  column_to_rownames("subid")
+
+scores_project <- predict.psych(object = efa_S1, data = temp)
+```
+
+```{r, fig.width = 4, fig.asp = 0.7}
+scores_project %>%
+  data.frame() %>%
+  rownames_to_column("subid_target") %>%
+  mutate(subid = gsub("_.*$", "", subid_target),
+         target = gsub("^.*_", "", subid_target),
+         target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = round(4/30, 3),
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  select(-subid_target) %>%
+  gather(factor, score, -c(subid, starts_with("target"))) %>%
+  ggplot(aes(x = target_num, y = score, color = factor)) +
+  facet_grid(~ factor) +
+  geom_line(aes(group = subid), alpha = 0.1) +
+  scale_x_continuous(breaks = seq(0, 60, 12)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "none") +
+  labs(title = "Kara's attempt to project into the Study 1 space",
+       subtitle = "Replaced all missing values (40 per participant) with a random integer between 0-5",
+       x = "target age (months)", y = "factor score")
+```
+
+
+# Demographics
+
+```{r}
+ggplot(d_demo, aes(x = Duration/60)) + 
+  geom_histogram(binwidth = 2) +
+  geom_vline(xintercept = median(d_demo$Duration/60), color = "blue", lty = 2) +
+  scale_x_continuous(breaks = seq(0, 10000, 4)) +
+  labs(title = "Duration of study (according to Qualtrics)",
+       subtitle = "Blue dotted line marks median",
+       x = "Duration (in minutes)",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = Age)) + 
+  geom_histogram(binwidth = 2) +
+  geom_vline(xintercept = median(d_demo$Age), color = "blue", lty = 2) +
+  scale_x_continuous(breaks = seq(0, 10000, 4)) +
+  labs(title = "Particpiant age (self-reported)",
+       subtitle = "Blue dotted line marks median",
+       x = "Age (in years)",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = GenderSex)) + 
+  geom_bar() +
+  labs(title = "Particpiant gender/sex (self-reported)",
+       x = "Gender/sex",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = gsub('(.{1,30})(\\s|$)', '\\1\n', RaceEthnicity_collapse))) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Particpiant race/ethnicity (self-reported)",
+       x = "Race/ethnicity",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = FirstLang)) + 
+  geom_bar() +
+  labs(title = "Particpiant first language (self-reported)",
+       x = "Language",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = factor(Education,
+                              levels = levels(d$Education),
+                              labels = gsub('(.{1,30})(\\s|$)', '\\1\n', 
+                                            levels(d$Education))))) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Particpiant educational attainment (self-reported)",
+       x = "Highest level of education completed",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = Income)) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Particpiant household income (self-reported)",
+       x = "Annual household income",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = HouseholdSize)) + 
+  geom_histogram(binwidth = 1) +
+  geom_vline(xintercept = median(d_demo$HouseholdSize), color = "blue", lty = 2) +
+  scale_x_continuous(breaks = seq(0, 10000, 1)) +
+  labs(title = "Particpiant household size (self-reported)",
+       subtitle = "Blue dotted line marks median",
+       x = "Number of people in household (adults and children)",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = MaritalStatus)) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Particpiant marital status (self-reported)",
+       x = "Marital status",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = Parent)) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Particpiant parent status (self-reported)",
+       subtitle = "'NA' indicates response of 'Prefer not to say'",
+       x = "Parent status",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo %>% filter(Parent == "Yes"), aes(x = ChildrenNumber)) + 
+  geom_histogram(binwidth = 1) +
+  geom_vline(xintercept = median(d_demo[d_demo$Parent == "Yes",]$ChildrenNumber, na.rm = T), 
+             color = "blue", lty = 2) +
+  scale_x_continuous(breaks = seq(0, 10000, 1)) +
+  labs(title = "Number of children among parents (self-reported)",
+       subtitle = "Blue dotted line marks median",
+       x = "Number of children (among parents)",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo %>% filter(Parent == "Yes"), 
+       aes(x = factor(ChildrenOldestAge_collapse,
+                      levels = levels(d_demo$ChildrenOldestAge_collapse),
+                      labels = gsub('(.{1,30})(\\s|$)', '\\1\n', 
+                                    levels(d_demo$ChildrenOldestAge_collapse))))) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Age of oldest child among parents (self-reported)",
+       x = "Age of child in years (among parents)",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo %>% filter(Parent == "Yes"), 
+       aes(x = factor(ChildrenYoungestAge_collapse,
+                      levels = levels(d_demo$ChildrenYoungestAge_collapse),
+                      labels = gsub('(.{1,30})(\\s|$)', '\\1\n', 
+                                    levels(d_demo$ChildrenYoungestAge_collapse))))) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Age of youngest child among parents (self-reported)",
+       x = "Age of child in years (among parents)",
+       y = "Number of participants")
+```
+
+
