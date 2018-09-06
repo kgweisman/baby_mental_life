@@ -352,65 +352,68 @@ scoresplot_fun(efa_all_par, target = "all (study 2)",
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
 
+Here's a multilevel linear regression on these factor scores, with random intercepts and slopes (for target and factor) by participant. Target is coded as numeric, with only the linear contrast.
 
-```{r, include = F}
-# Here's a multilevel linear regression on these factor scores, with random intercepts and slopes (for target and factor) by participant. Target is coded with linear and quadratic contrasts, and factor is effect-coded for comparison with the grand mean (with the last factor as the base, -1):
+```{r}
+efa_all_par_scores <- efa_all_par$scores[] %>%
+  data.frame() %>%
+  rownames_to_column("subid") %>%
+  mutate(target = gsub("^.*_target", "target", subid),
+         ResponseId = gsub("_target.*$", "", subid),
+         target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = round(4/30, 3),
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  select(-subid, -target) %>%
+  gather(factor, score, -starts_with("target"), -ResponseId) %>%
+  mutate_at(vars(factor), funs(factor))
 
-# efa_all_par_scores <- efa_all_par$scores[] %>%
-#   data.frame() %>%
-#   rownames_to_column("subid") %>%
-#   mutate(target = gsub("^.*_target", "target", subid),
-#          ResponseId = gsub("_target.*$", "", subid),
-#          target_num = recode(target,
-#                              "target00mo" = 0,
-#                              "target0Xmo" = round(4/30, 3),
-#                              "target01mo" = 1,
-#                              "target02mo" = 2,
-#                              "target04mo" = 4,
-#                              "target06mo" = 6,
-#                              "target09mo" = 9,
-#                              "target12mo" = 12,
-#                              "target18mo" = 18,
-#                              "target24mo" = 24,
-#                              "target36mo" = 36,
-#                              "target48mo" = 48,
-#                              "target60mo" = 60),
-#          target_ord = recode_factor(target,
-#                                     "target00mo" = "newborns",
-#                                     "target0Xmo" = "4-day-olds",
-#                                     "target01mo" = "1-month-olds",
-#                                     "target02mo" = "2-month-olds",
-#                                     "target04mo" = "4-month-olds",
-#                                     "target06mo" = "6-month-olds",
-#                                     "target09mo" = "9-month-olds",
-#                                     "target12mo" = "12-month-olds",
-#                                     "target18mo" = "18-month-olds",
-#                                     "target24mo" = "2-year-olds",
-#                                     "target36mo" = "3-year-olds",
-#                                     "target48mo" = "4-year-olds",
-#                                     "target60mo" = "5-year-olds")) %>%
-#   select(-subid, -target) %>%
-#   gather(factor, score, -starts_with("target"), -ResponseId) %>%
-#   mutate_at(vars(factor), funs(factor))
-# 
-# contrasts(efa_all_par_scores$factor) <- contr.sum(reten_all_par)
+contrasts(efa_all_par_scores$factor) <- contr.sum(reten_all_par)
 
-# r_all_par <- lmer(score ~ target_num * factor 
-#                   + (target_num + factor | ResponseId),
-#                   efa_all_par_scores)
-# summary(r_all_par, corr = F)
-
-# There's a problem here: "Model is nearly unidentifiable: very large eigenvalue." We need to come back to consider this more carefully.
+r_all_par <- lmer(score ~ target_num * factor
+                  + (target_num + factor | ResponseId),
+                  efa_all_par_scores)
+summary(r_all_par, corr = F)
 ```
+
+**There's a problem here**: "Model is nearly unidentifiable: very large eigenvalue." We need to come back to consider this more carefully.
+
+For now, let's see what the polynomial effects look like:
 
 ```{r}
 # adding polynomial effects
-# r_all_par_poly <- lmer(score ~ poly(target_num, 3) * factor
-#                        + (poly(target_num, 3) + factor | ResponseId),
-#                        efa_all_par_scores,
-#                        control = glmerControl(optimizer = "bobyqa"))
-# summary(r_all_par_poly, corr = F)
+r_all_par_poly <- lmer(score ~ poly(target_num, 3) * factor
+                       + (poly(target_num, 3) + factor | ResponseId),
+                       efa_all_par_scores)
+summary(r_all_par_poly, corr = F)
 ```
+
+**Still problems fitting these models.** A topic for discussion!
+
 
 #### Age as numeric (square-root-transformed)
 
@@ -423,6 +426,9 @@ scoresplot_fun(efa_all_par, target = "all (study 2)",
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
 
+I have not tried to fit regression models on these data yet.
+
+
 #### Age as ordinal
 
 ```{r, fig.width = 4, fig.asp = 0.5}
@@ -432,6 +438,9 @@ scoresplot_fun(efa_all_par, target = "all (study 2)",
        x = "age (ordinal)") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
+
+I have not tried to fit regression models on these data yet.
+
 
 And here's a close look at all of the raw data (color-coded according to the Study 2 EFA results):
 
