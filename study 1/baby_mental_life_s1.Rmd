@@ -948,4 +948,11 @@ ggplot(d_demo %>% filter(Parent == "Yes"),
        y = "Number of participants")
 ```
 
+# Save EFA output
+
+Finally, I'll export the 4-factor EFA results to a saved file that I can draw on in our Study 2 analyses.
+
+```{r}
+saveRDS(efa_all_par, file = "./s1_efa.rds")
+```
 
