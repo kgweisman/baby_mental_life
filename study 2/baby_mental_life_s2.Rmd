@@ -352,69 +352,6 @@ scoresplot_fun(efa_all_par, target = "all (study 2)",
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
 
-Here's a multilevel linear regression on these factor scores, with random intercepts and slopes (for target and factor) by participant. Target is coded as numeric, with only the linear contrast.
-
-```{r}
-efa_all_par_scores <- efa_all_par$scores[] %>%
-  data.frame() %>%
-  rownames_to_column("subid") %>%
-  mutate(target = gsub("^.*_target", "target", subid),
-         ResponseId = gsub("_target.*$", "", subid),
-         target_num = recode(target,
-                             "target00mo" = 0,
-                             "target0Xmo" = round(4/30, 3),
-                             "target01mo" = 1,
-                             "target02mo" = 2,
-                             "target04mo" = 4,
-                             "target06mo" = 6,
-                             "target09mo" = 9,
-                             "target12mo" = 12,
-                             "target18mo" = 18,
-                             "target24mo" = 24,
-                             "target36mo" = 36,
-                             "target48mo" = 48,
-                             "target60mo" = 60),
-         target_ord = recode_factor(target,
-                                    "target00mo" = "newborns",
-                                    "target0Xmo" = "4-day-olds",
-                                    "target01mo" = "1-month-olds",
-                                    "target02mo" = "2-month-olds",
-                                    "target04mo" = "4-month-olds",
-                                    "target06mo" = "6-month-olds",
-                                    "target09mo" = "9-month-olds",
-                                    "target12mo" = "12-month-olds",
-                                    "target18mo" = "18-month-olds",
-                                    "target24mo" = "2-year-olds",
-                                    "target36mo" = "3-year-olds",
-                                    "target48mo" = "4-year-olds",
-                                    "target60mo" = "5-year-olds")) %>%
-  select(-subid, -target) %>%
-  gather(factor, score, -starts_with("target"), -ResponseId) %>%
-  mutate_at(vars(factor), funs(factor))
-
-contrasts(efa_all_par_scores$factor) <- contr.sum(reten_all_par)
-
-r_all_par <- lmer(score ~ target_num * factor
-                  + (target_num + factor | ResponseId),
-                  efa_all_par_scores)
-summary(r_all_par, corr = F)
-```
-
-**There's a problem here**: "Model is nearly unidentifiable: very large eigenvalue." We need to come back to consider this more carefully.
-
-For now, let's see what the polynomial effects look like:
-
-```{r}
-# adding polynomial effects
-r_all_par_poly <- lmer(score ~ poly(target_num, 3) * factor
-                       + (poly(target_num, 3) + factor | ResponseId),
-                       efa_all_par_scores)
-summary(r_all_par_poly, corr = F)
-```
-
-**Still problems fitting these models.** A topic for discussion!
-
-
 #### Age as numeric (square-root-transformed)
 
 ```{r, fig.width = 4, fig.asp = 0.5}
@@ -426,8 +363,6 @@ scoresplot_fun(efa_all_par, target = "all (study 2)",
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
 
-I have not tried to fit regression models on these data yet.
-
 
 #### Age as ordinal
 
@@ -438,8 +373,6 @@ scoresplot_fun(efa_all_par, target = "all (study 2)",
        x = "age (ordinal)") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
-
-I have not tried to fit regression models on these data yet.
 
 
 And here's a close look at all of the raw data (color-coded according to the Study 2 EFA results):
@@ -503,8 +436,6 @@ d_all %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
   guides(color = guide_legend(override.aes = list(alpha = 1)))
 ```
-
-We'll skip regression analyses for now.
 
 
 ## Minimizing BIC
@@ -659,6 +590,97 @@ scores_project %>%
        subtitle = "Replaced all missing values (40 per participant) with a random integer between 0-5",
        x = "target age (months)", y = "factor score")
 ```
+
+
+
+# Regression models in Study 2 factor space
+
+Here's a multilevel linear regression on these factor scores, with random intercepts and slopes (for target and factor) by participant. Target is coded as numeric, with only the linear contrast.
+
+```{r}
+efa_all_par_scores <- efa_all_par$scores[] %>%
+  data.frame() %>%
+  rownames_to_column("subid") %>%
+  mutate(target = gsub("^.*_target", "target", subid),
+         ResponseId = gsub("_target.*$", "", subid),
+         target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = round(4/30, 3),
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  select(-subid, -target) %>%
+  gather(factor, score, -starts_with("target"), -ResponseId) %>%
+  mutate_at(vars(factor), funs(factor))
+
+contrasts(efa_all_par_scores$factor) <- contr.sum(reten_all_par)
+
+r_all_par <- lmer(score ~ target_num * factor
+                  + (target_num + factor | ResponseId),
+                  efa_all_par_scores)
+summary(r_all_par, corr = F)
+```
+
+If we try to run the model above (our planned analysis), we get an error: "Model is nearly unidentifiable: very large eigenvalue." The error suggests rescaling variables, which solves the problem. Here I've re-scaled by divided age in months by 12, to get age in years. **Let's make sure to talk about this.**
+
+```{r}
+r_all_par_rescaled <- lmer(score ~ target_num * factor
+                           + (target_num + factor | ResponseId),
+                           efa_all_par_scores %>%
+                             mutate(target_num = target_num/12))
+summary(r_all_par_rescaled, corr = F)
+```
+
+As we predicted (H2), we see dramatic increases in mental capacity attributions across the age range (main effect of `target_num`).
+
+And also as we predicted (H1), we see differences across factors in where newborns are perceived to start off: Relative to the grand mean, newborns are perceived to start off with more "negative emotions" (distress, frustration, etc.; main effect of `factor1`), less/fewer capacities in the domain of "cognition and control" (emotional control, self control, etc.; main effect of `factor2`), and relatively more "bodily sensations" (pain, fatigue, etc.; main effect of `factor3`). (We could recode this to look at `factor4`, or just eyeball it from the plot.) Also as predicted, we see that the perceived changes across age vary dramatically across factors: "negative emotions" are perceived to change relatively less over development, "cognition and control" are perceived to change much more over development, and "bodily sensations" are predicted to chagne relatively less.
+
+This is all very much in line with our preregistered hypotheses :)
+
+Now let's see what the polynomial effects look like (again, looking at age in years instead of months). As we expected, including all of the polynomial effects as random slopes caused the model not to converge (I think we must be calculating df wrong), so I implemented our preregistered remedy and included only the linear effect as a random slope.
+
+```{r}
+# adding polynomial effects
+r_all_par_poly <- lmer(score ~ poly(target_num, 3) * factor
+                       + (poly(target_num, 1) + factor | ResponseId),
+                       efa_all_par_scores %>%
+                         mutate(target_num = target_num/12))
+summary(r_all_par_poly, corr = F)
+```
+
+Lots to sift through here, but in general we see that the effect of target age on mental capacity attributions definitely has linear, quadratic, and cubic components, all three of which seem to vary substantially across factors. Pretty much all of these differences are "significant" (if you consider |t| > 2 to be "significant") - for interpretation, I would need to look closer at the plot. Let's pull it up again here, with blue lines approximating the formula `y ~ poly(x, 3)`:
+
+```{r, fig.width = 4, fig.asp = 0.7}
+scoresplot_fun(efa_all_par, target = "all (study 2)", 
+               target_encoding = "numeric") +
+  scale_x_continuous("age (months)", breaks = seq(0, 60, 12)) +
+  geom_smooth(method = "lm", formula = "y ~ poly(x, 3)",
+              color = "blue", size = 2)
+```
+
+We can talk through these interpretations together - but I find the difference between Factor 2 ("cognition & control") and Factor 4 ("positive emotions") to be especially interesting!
 
 
 # Demographics
