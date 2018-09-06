@@ -11,3 +11,6 @@
 *.key
 *.ppt
 *.pptx
+*.RData
+*.Rhistory
+*.Rapp.history
