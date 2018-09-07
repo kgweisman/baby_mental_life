@@ -595,6 +595,8 @@ scores_project %>%
 
 # Regression models in Study 2 factor space
 
+## Age as numeric (raw)
+
 Here's a multilevel linear regression on these factor scores, with random intercepts and slopes (for target and factor) by participant. Target is coded as numeric, with only the linear contrast.
 
 ```{r}
@@ -681,6 +683,124 @@ scoresplot_fun(efa_all_par, target = "all (study 2)",
 ```
 
 We can talk through these interpretations together - but I find the difference between Factor 2 ("cognition & control") and Factor 4 ("positive emotions") to be especially interesting!
+
+
+## Age as numeric (square-root-transformed)
+
+Here's a multilevel linear regression on these factor scores, with random intercepts and slopes (for target and factor) by participant. Target is coded as numeric and square-root-transformed, with only the linear contrast.
+
+```{r}
+r_all_par_sqrt <- lmer(score ~ target_num * factor
+                       + (target_num + factor | ResponseId),
+                       efa_all_par_scores %>%
+                         mutate(target_num = sqrt(target_num)))
+summary(r_all_par_sqrt, corr = F)
+```
+
+We actually don't have the rescaling error here, but just for completeness I'll also re-scale by dividing age in months by 12, to get age in years, before doing the square-root transformation. The results are equivalent:
+
+```{r}
+r_all_par_sqrt_rescaled <- lmer(score ~ target_num * factor
+                                + (target_num + factor | ResponseId),
+                                efa_all_par_scores %>%
+                                  mutate(target_num = sqrt(target_num/12)))
+summary(r_all_par_sqrt_rescaled, corr = F)
+```
+
+(Confirmed: t-values are identical.)
+
+Interestingly, the patterns here are identical to the patterns we get when we don't tranform target age - I'm not sure what to make of this exactly. I thought it was as if we were only looking at the quadratic effect of target age? **Let's talk!**
+
+Now let's see what the polynomial effects look like. Again, couldn't fit all of the polynomial effects as random slopes, so I implemented our preregistered remedy and included only the linear effect as a random slope. Still didn't converge, so tried asking only for linear and quadratic (not cubic) effects. Still didn't converge. I'm going to leave this out for now.
+
+```{r}
+# # adding polynomial effects
+# r_all_par_sqrt_poly <- lmer(score ~ poly(target_num, 3) * factor
+#                             + (poly(target_num, 1) + factor | ResponseId),
+#                             efa_all_par_scores %>%
+#                               mutate(target_num = sqrt(target_num)))
+# summary(r_all_par_sqrt_poly, corr = F)
+```
+
+Here's the relevant plot, though - with one regression line for the linear effect only (in red - but remember, this is after square-root transformation!), one for linear, quadratic, and cubic effects (in blue):
+
+```{r, fig.width = 4, fig.asp = 0.7}
+scoresplot_fun(efa_all_par, target = "all (study 2)", 
+               target_encoding = "numeric") +
+  scale_x_continuous("age after square-root transformation (months)", 
+                     breaks = seq(0, 60, 12), trans = "sqrt") +
+  geom_smooth(method = "lm", formula = "y ~ poly(x, 1)", 
+              color = "red", size = 2) +
+  geom_smooth(method = "lm", formula = "y ~ poly(x, 3)",
+              color = "blue", size = 2)
+```
+
+
+
+## Age as ordinal
+
+Finally, I'll try the ordinal approach. Here's a multilevel linear regression on these factor scores, with random intercepts and slopes (for target and factor) by participant. Target is coded as ordinal (well actually, recoded as 0, 1, 2, ...12 and then treated as numeric), with only the linear contrast. This is a different way of doing it than what we preregistered as exploratory, but I think it might make sense.
+
+```{r}
+r_all_par_ord1 <- lmer(score ~ target_ord * factor
+                       + (target_ord + factor | ResponseId),
+                       efa_all_par_scores %>%
+                         mutate(target_ord = as.numeric(target_ord) - 1))
+summary(r_all_par_ord1, corr = F)
+```
+
+At a quick glance these are all the same conclusions that we get from our other analyses - yay!
+
+Here's what we actually preregistered as exploratory [DID NOT FINISH RUNNING IN >15 MINUTES, WILL TRY AGAIN ANOTHER TIME]
+
+```{r}
+# contrasts(efa_all_par_scores$target_ord) <- contr.poly(13)
+# contrasts(efa_all_par_scores$target_ord)[,2:12] <- 0
+# 
+# r_all_par_ord2 <- lmer(score ~ target_ord * factor
+#                        + (target_ord + factor | ResponseId),
+#                       efa_all_par_scores)
+# summary(r_all_par_ord2, corr = F)
+```
+
+[INTERPRET]
+
+Now let's see what the polynomial effects look like... Again, this is a different way of doing it than what we preregistered as exploratory, but I think it might make sense. [DID NOT RUN YET, OTHER MODELS ARE TAKING TOO LONG]
+
+```{r}
+# r_all_par_ord_poly1 <- lmer(score ~ poly(target_ord, 3) * factor
+#                             + (poly(target_ord, 1) + factor | ResponseId),
+#                             efa_all_par_scores %>%
+#                               mutate(target_ord = as.numeric(target_ord) - 1))
+# summary(r_all_par_ord_poly1, corr = F)
+```
+
+[INTERPRET]
+
+And here's what we actually preregistered as exploratory [DID NOT RUN YET, OTHER MODELS ARE TAKING TOO LONG].
+
+```{r}
+# contrasts(efa_all_par_scores$target_ord) <- contr.poly(13)
+# contrasts(efa_all_par_scores$target_ord)[,4:12] <- 0
+# 
+# r_all_par_ord_poly2 <- lmer(score ~ target_ord * factor
+#                             + (target_ord + factor | ResponseId),
+#                             efa_all_par_scores)
+# summary(r_all_par_ord_poly2, corr = F)
+```
+
+Here's the relevant plot, again:
+
+```{r, fig.width = 4, fig.asp = 0.7}
+scoresplot_fun(efa_all_par, target = "all (study 2)", 
+               target_encoding = "ordinal") +
+  # scale_x_continuous("age after square-root transformation (months)", 
+  #                    breaks = seq(0, 60, 12), trans = "sqrt") +
+  # geom_smooth(method = "lm", formula = "y ~ poly(x, 1)", 
+  #             color = "red", size = 2) +
+  geom_smooth(method = "lm", formula = "y ~ poly(x, 3)",
+              color = "blue", size = 2)
+```
 
 
 # Demographics
