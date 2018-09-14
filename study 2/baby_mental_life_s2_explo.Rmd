@@ -1,0 +1,191 @@
+---
+title: "Baby Mental Life: Study 2"
+subtitle: "Exploratory analyses: Treating factors as categories"
+date: 2018-09-14
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+---
+
+"Baby Mental Life: Study 2" was conducted on MTurk on 2018-08-04.
+
+Our planned sample was 300 participants, and we anticipated that roughly 80% of recruited participants would pass all of our attention checks, so we initially recruited 378 participants (on the idea that ~80% of 378 ~ 300 participants; note that for administrative purposes we need to recuit participants in batches that were divisible by 9). After filtering out participants who failed at least one of our attention checks, we ended up retaining fewer than 300 participants, so we recruited an additional 16 participants for a total of 394 people recruited. At each stage, we recruited women and men through separate studies, in hopes of acquiring a roughly equal split between genders.
+
+In the end, we ended up with a sample of 304 participants who passed our attention checks, 237 of whom came from unique GPS coordinates.
+
+**For this first pass, these data _exclude_ participants where there is another participant with an identical set of GPS coordinates as recorded by Qualtrics.**
+
+Each participant assessed children's mental capacities at 13 target ages between the ages of 0 and 5 years. For each target, they rated 20 mental capacities on a scale from 0 (not at all capable) to 100 (completely capable). 
+
+For more details about the study, see our preregistration [here](https://osf.io/j72dg/). 
+
+```{r}
+# load required libraries
+library(tidyverse)
+library(langcog) # source: https://github.com/langcog/langcog-package
+library(psych)
+library(lme4)
+
+# set theme for ggplots
+theme_set(theme_bw())
+```
+
+```{r}
+# run source code (extra home-made functions)
+source("./scripts/max_factors_efa.R")
+source("./scripts/plot_fun.R")
+source("./scripts/reten_fun.R")
+source("./scripts/table_fun.R")
+source("./scripts/data_prep.R")
+```
+
+# Preliminaries
+
+First, I'll do the factor analysis, and get a list of the top 5 items by factor:
+
+```{r}
+# load in S1 efa in case we need it
+efa_S1 <- readRDS("../study 1/s1_efa.rds")
+```
+
+```{r}
+table_fun(efa_S2, num_items = 5, pos_abs = "abs")
+```
+
+Now I'll use this to define categories of mental capacities:
+
+```{r}
+# get items by factor
+factors_S2 <- efa_S2$loadings[] %>%
+  data.frame() %>%
+  rownames_to_column("capacity") %>%
+  gather(factor, loading, -capacity) %>%
+  group_by(capacity) %>%
+  top_n(1, loading) %>%
+  ungroup() %>%
+  select(-loading) %>%
+  mutate(factor_names = recode_factor(factor,
+                                      "MR1" = "Negative emotions",
+                                      "MR2" = "Cognition & control",
+                                      "MR3" = "Bodily sensations",
+                                      "MR4" = "Positive/social emotions"))
+
+# make new dataframe
+d_cat <- d_all %>%
+  rownames_to_column("subid_target") %>%
+  mutate(subid = gsub("_.*$", "", subid_target),
+         target = gsub("^.*_", "", subid_target)) %>%
+  select(-subid_target) %>%
+  mutate(target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = 4/30,
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  gather(capacity, response, -c(subid, starts_with("target"))) %>%
+  left_join(factors_S2)
+```
+
+And get an average "score" for each of these factors for each participant:
+
+```{r}
+d_cat_scored <- d_cat %>%
+  group_by(subid, target, target_num, target_ord, factor, factor_names) %>%
+  summarise(score = mean(response, na.rm = T))
+```
+
+
+# Plots
+
+```{r}
+# bootstrapped means and 95% CIs
+d_cat_scored_boot <- d_cat_scored %>%
+  group_by(target, target_num, target_ord, factor, factor_names) %>%
+  multi_boot_standard("score") %>%
+  ungroup()
+```
+
+```{r, fig.width = 4, fig.asp = 0.5}
+ggplot(d_cat_scored,
+       aes(x = target_num, y = score, color = factor_names)) +
+  facet_grid(~ factor_names) +
+  geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_scored_boot, color = "black",
+            aes(y = mean, group = factor_names)) +
+  geom_pointrange(data = d_cat_scored_boot, color = "black",
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Set2", guide = "none") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  scale_x_continuous(breaks = seq(0, 60, 12)) +
+  labs(title = "Devleopmental trajectories of 'scores' by category",
+       subtitle = "Exact age, untransformed",
+       x = "target age (months)")
+```
+
+```{r, fig.width = 4, fig.asp = 0.5}
+ggplot(d_cat_scored,
+       aes(x = target_num, y = score, color = factor_names)) +
+  facet_grid(~ factor_names) +
+  geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_scored_boot, color = "black",
+            aes(y = mean, group = factor_names)) +
+  geom_pointrange(data = d_cat_scored_boot, color = "black",
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Set2", guide = "none") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  scale_x_continuous(breaks = seq(0, 60, 12), trans = "sqrt") +
+  labs(title = "Devleopmental trajectories of 'scores' by category",
+       subtitle = "Exact age, square-root-transformed",
+       x = "age after square-root transformation (months)")
+```
+
+```{r, fig.width = 4, fig.asp = 0.5}
+ggplot(d_cat_scored,
+       aes(x = target_ord, y = score, color = factor_names)) +
+  facet_grid(~ factor_names) +
+  geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_scored_boot, color = "black",
+            aes(y = mean, group = factor_names)) +
+  geom_pointrange(data = d_cat_scored_boot, color = "black",
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Set2", guide = "none") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Devleopmental trajectories of 'scores' by category",
+       subtitle = "Age as an ordinal variable",
+       x = "age (ordinal)")
+```
