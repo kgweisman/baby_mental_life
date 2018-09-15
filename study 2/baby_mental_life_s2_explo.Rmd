@@ -52,6 +52,7 @@ First, I'll do the factor analysis, and get a list of the top 5 items by factor:
 ```{r}
 # load in S1 efa in case we need it
 efa_S1 <- readRDS("../study 1/s1_efa.rds")
+demo_S1 <- read.csv("../study 1/s1_demo.csv")
 ```
 
 ```{r}
@@ -233,7 +234,9 @@ This is weirdly hard to model... lots of alternative models didn't converge. Als
 
 # Parents vs. non-parents
 
-## Preliminaries
+## Study 2
+
+### Preliminaries
 
 ```{r}
 d_parent <- d_all %>%
@@ -334,9 +337,9 @@ scores_S2 <- efa_S2$scores %>%
   mutate(factor = factor(factor))
 ```
 
-## Plots
+### Plots
 
-### Factor scores
+#### Factor scores
 
 ```{r}
 # bootstrapped means and 95% CIs
@@ -422,7 +425,7 @@ scores_S2 %>%
        y = "score (NOTE: scales differ)")
 ```
 
-### As categories
+#### Category 'summary scores'
 
 ```{r}
 # bootstrapped means and 95% CIs
@@ -506,7 +509,7 @@ ggplot(d_cat_parent_scored_boot,
 
 All of these visualizations suggest that, relative to non-parents (n = `r parent_counts$n[parent_counts$parent == "non-parent"][1]`), parents (n = `r parent_counts$n[parent_counts$parent == "parent"][1]`) tended to perceive greater abilities, in all domains except for bodily sensations. For both negative emotions and positive/social emotions, this difference is greatest in the mid-range of the target ages (12-24 months); for cognition & control, it's greater at the older end of the target ages (e.g., 3-5 years). It doesn't look like a huge effect, but it's intruiging.
 
-## Regressions
+### Regressions
 
 There are many ways that we could choose to model this - I'll try out the factor scores first, adapting our primary regression models (not in this notebook).
 
@@ -543,3 +546,589 @@ A lot to sort through here, but here are some observations:
 - Compared to collapsing across factors, in the domain of bodily sensations (factor 3), parents perceived less growth (`poly(target_num, 3)1:factor3:parent2`). I'm not sure how to interpret the differences in non-linearity here.
 
 You could imagine re-running any of these with a square-root transformation on target age, and/or with the 'summary scores' by category, but I'm not going to do that right now. 
+
+
+## Study 2
+
+### Preliminaries
+
+```{r}
+d_parent <- d_all %>%
+  rownames_to_column("subid_target") %>%
+  mutate(subid = gsub("_.*$", "", subid_target),
+         target = gsub("^.*_", "", subid_target)) %>%
+  select(-subid_target) %>%
+  mutate(target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = 4/30,
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  gather(capacity, response, -c(subid, starts_with("target"))) %>%
+  left_join(d_demo %>%
+              select(ResponseId, Parent) %>%
+              rename(subid = ResponseId, parent = Parent) %>%
+              mutate(subid = as.character(subid)))
+```
+
+```{r, results = "asis"}
+parent_counts <- d_demo %>% 
+  distinct(ResponseId, Parent) %>% 
+  rename(subid = ResponseId, parent = Parent) %>%
+  count(parent) %>% 
+  mutate(proportion = n/sum(n))
+
+knitr::kable(parent_counts, digits = 3)
+```
+
+```{r}
+d_demo %>%
+  count(Parent, ChildrenOldestAge_collapse)
+```
+
+Given these numbers, I think our best bet it just to look at parents vs. non-parents, and not try to separate out parents of young children (too few!).
+
+```{r}
+scores_S2 <- efa_S2$scores %>%
+  data.frame() %>%
+  rownames_to_column("subid_target") %>%
+  mutate(subid = gsub("_.*$", "", subid_target),
+         target = gsub("^.*_", "", subid_target)) %>%
+  select(-subid_target) %>%
+  mutate(target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = 4/30,
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  gather(factor, score, -c(subid, starts_with("target"))) %>%
+  left_join(d_parent %>% distinct(subid, parent)) %>%
+  left_join(d_cat %>% distinct(factor, factor_names)) %>%
+  mutate(factor = factor(factor))
+```
+
+### Plots
+
+#### Factor scores
+
+```{r}
+# bootstrapped means and 95% CIs
+d_parent_boot <- scores_S2 %>%
+  filter(!is.na(parent)) %>%
+  group_by(parent, target, target_num, target_ord, factor_names) %>%
+  multi_boot_standard("score") %>%
+  ungroup() %>%
+  data.frame()
+```
+
+```{r, fig.width = 5.5, fig.asp = 0.45}
+scores_S2 %>%
+  filter(!is.na(parent)) %>%
+  ggplot(aes(x = target_num, y = score, color = parent)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.05) +
+  geom_line(data = d_parent_boot, aes(y = mean, group = parent)) +
+  geom_pointrange(data = d_parent_boot, fatten = 1.5, # note: too close to dodge
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = parent), #color = "black",
+  #             method = "lm", formula = "y ~ poly(x, 3)") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12)) +
+  scale_y_continuous(breaks = seq(-10, 10, 0.5)) +
+  labs(title = "Developmental trajectories of factor scores, by parent status",
+       subtitle = "Exact age, untransformed",
+       color = "parent status: ",
+       x = "target age (months)", y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 5.5, fig.asp = 0.45}
+scores_S2 %>%
+  filter(!is.na(parent)) %>%
+  ggplot(aes(x = target_num, y = score, color = parent)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.05) +
+  geom_line(data = d_parent_boot, aes(y = mean, group = parent),
+            position = position_dodge(width = 0.3)) +
+  geom_pointrange(data = d_parent_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper),
+                  position = position_dodge(width = 0.3)) +
+  # geom_smooth(aes(group = parent), #color = "black",
+  #             method = "lm", formula = "y ~ poly(x, 3)") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12), trans = "sqrt") +
+  scale_y_continuous(breaks = seq(-10, 10, 0.5)) +
+  labs(title = "Developmental trajectories of factor scores, by parent status",
+       subtitle = "Exact age, square-root transformed",
+       color = "parent status: ",
+       x = "age after square-root transformation (months)", 
+       y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 5.5, fig.asp = 0.45}
+scores_S2 %>%
+  filter(!is.na(parent)) %>%
+  ggplot(aes(x = target_ord, y = score, color = parent)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.05) +
+  geom_line(data = d_parent_boot, aes(y = mean, group = parent),
+            position = position_dodge(width = 0.5)) +
+  geom_pointrange(data = d_parent_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper),
+                  position = position_dodge(width = 0.5)) +
+  # geom_smooth(aes(group = parent), #color = "black",
+  #             method = "lm", formula = "y ~ poly(x, 3)") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_y_continuous(breaks = seq(-10, 10, 0.5)) +
+  labs(title = "Developmental trajectories of factor scores, by parent status",
+       subtitle = "Age as ordinal variable",
+       color = "parent status: ",
+       x = "age (ordinal)", 
+       y = "score (NOTE: scales differ)")
+```
+
+#### Category 'summary scores'
+
+```{r}
+# bootstrapped means and 95% CIs
+d_cat_parent_scored_boot <- d_cat_scored %>%
+  filter(!is.na(parent)) %>%
+  group_by(parent, target, target_num, target_ord, factor, factor_names) %>%
+  multi_boot_standard("score") %>%
+  ungroup()
+```
+
+```{r, fig.width = 4, fig.asp = 0.5}
+ggplot(d_cat_parent_scored_boot,
+       aes(x = target_num, y = score, color = parent)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_parent_scored_boot, 
+            aes(y = mean, group = parent)) +
+  geom_pointrange(data = d_cat_parent_scored_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12)) +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Exact age, untransformed",
+       x = "target age (months)",
+       y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 4, fig.asp = 0.5}
+ggplot(d_cat_parent_scored_boot,
+       aes(x = target_num, y = score, color = parent)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_parent_scored_boot, 
+            aes(y = mean, group = parent)) +
+  geom_pointrange(data = d_cat_parent_scored_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12), trans = "sqrt") +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Exact age, square-root transformation",
+       x = "age after square-root transformation (months)",
+       y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 4, fig.asp = 0.5}
+ggplot(d_cat_parent_scored_boot,
+       aes(x = target_ord, y = score, color = parent)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_parent_scored_boot, 
+            aes(y = mean, group = parent)) +
+  geom_pointrange(data = d_cat_parent_scored_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Age as an ordinal variable",
+       x = "age (ordinal)",
+       y = "score (NOTE: scales differ)")
+```
+
+All of these visualizations suggest that, relative to non-parents (n = `r parent_counts$n[parent_counts$parent == "non-parent"][1]`), parents (n = `r parent_counts$n[parent_counts$parent == "parent"][1]`) tended to perceive greater abilities, in all domains except for bodily sensations. For both negative emotions and positive/social emotions, this difference is greatest in the mid-range of the target ages (12-24 months); for cognition & control, it's greater at the older end of the target ages (e.g., 3-5 years). It doesn't look like a huge effect, but it's intruiging.
+
+### Regressions
+
+There are many ways that we could choose to model this - I'll try out the factor scores first, adapting our primary regression models (not in this notebook).
+
+```{r}
+contrasts(scores_S2$parent) <- contr.treatment(2, base = 1) # baseline: NON-parents
+contrasts(scores_S2$factor) <- contr.sum(4)
+```
+
+```{r}
+r2 <- lmer(score ~ target_num * factor * parent
+           + (target_num + factor | subid),
+           scores_S2 %>%
+             mutate(target_num = target_num/12))
+summary(r2)
+```
+
+The last three coefficients here are where the action is: According to this model, the difference between parents and non-parents in perceived developmental trajectories (`target_num:parent2`, which is not significant collapsing across factors) is exaggerated in the domain of cognition and control (`target_num:factor2:parent2`) and diminished in the domain of bodily sensations (`target_num:factor3:parent2`).
+
+Let's try adding polynomial effects:
+
+```{r}
+r3 <- lmer(score ~ poly(target_num, 3) * factor * parent
+           + (poly(target_num, 1) + factor | subid),
+           scores_S2 %>%
+             mutate(target_num = target_num/12))
+summary(r3)
+```
+
+A lot to sort through here, but here are some observations:
+
+- Collapsing across factors, it seems like parents might perceive exaggerated non-linearities? (`poly(target_num, 3)2:parent2` and `poly(target_num, 3)3:parent2`)
+- Compared to collapsing across factors, not a lot of additional parent vs. non-parent differences in negative emotions (factor 1)
+- Compared to collapsing across factors, parents perceived more dramatic (linear) growth in cognition/control (factor 2; `poly(target_num, 3)1:factor2:parent2`)
+- Compared to collapsing across factors, in the domain of bodily sensations (factor 3), parents perceived less growth (`poly(target_num, 3)1:factor3:parent2`). I'm not sure how to interpret the differences in non-linearity here.
+
+You could imagine re-running any of these with a square-root transformation on target age, and/or with the 'summary scores' by category, but I'm not going to do that right now. 
+
+## Study 1
+
+If we look back at Study 1, do we see similar effects by parent status?
+
+### Preliminaries
+
+```{r, results = "asis"}
+parent_counts_S1 <- demo_S1 %>% 
+  distinct(ResponseId, Parent) %>% 
+  rename(subid = ResponseId, parent = Parent) %>%
+  count(parent) %>% 
+  mutate(proportion = n/sum(n))
+
+knitr::kable(parent_counts, digits = 3)
+```
+
+```{r}
+scores_S1 <- efa_S1$scores %>%
+  data.frame() %>%
+  rownames_to_column("subid_target") %>%
+  mutate(subid = gsub("_.*$", "", subid_target),
+         target = gsub("^.*_", "", subid_target)) %>%
+  select(-subid_target) %>%
+  mutate(target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = 4/30,
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  gather(factor, score, -c(subid, starts_with("target"))) %>%
+  left_join(demo_S1 %>% distinct(ResponseId, Parent) %>%
+              rename(subid = ResponseId, parent = Parent) %>%
+              mutate(subid = as.character(subid))) %>%
+  mutate(factor_names = recode_factor(factor,
+                                      "MR4" = "Negative emotions (S1)",
+                                      "MR1" = "Cognition & control (S1)",
+                                      "MR2" = "Bodily sensations (S1)",
+                                      "MR3" = "Positive/social emotions (S1)"),
+         factor = factor(factor))
+```
+
+### Plots
+
+#### Factor scores
+
+```{r}
+# bootstrapped means and 95% CIs
+d_parent_boot_s1 <- scores_S1 %>%
+  filter(!is.na(parent)) %>%
+  group_by(parent, target, target_num, target_ord, factor_names) %>%
+  multi_boot_standard("score") %>%
+  ungroup() %>%
+  data.frame()
+```
+
+```{r, fig.width = 5.5, fig.asp = 0.45}
+scores_S1 %>%
+  filter(!is.na(parent)) %>%
+  ggplot(aes(x = target_num, y = score, color = parent)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.05) +
+  geom_line(data = d_parent_boot_s1, 
+            position = position_dodge(width = 5), lty = 2,
+            aes(y = mean, group = parent)) +
+  geom_pointrange(data = d_parent_boot_s1,
+                  position = position_dodge(width = 5),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = parent), #color = "black",
+  #             method = "lm", formula = "y ~ poly(x, 3)") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12)) +
+  scale_y_continuous(breaks = seq(-10, 10, 0.5)) +
+  labs(title = "Developmental trajectories of factor scores, by parent status (STUDY 1)",
+       subtitle = "Exact age, untransformed",
+       color = "parent status: ",
+       x = "target age (months)", y = "score (NOTE: scales differ)")
+```
+
+(I won't bother re-plotting with other treatments of age, since there are only 3 target ages and it's easy enough to see them here.)
+
+#### Category 'summary scores'
+
+```{r}
+d_cat_S1 <- efa_S1$r %>%
+  data.frame() %>%
+  rownames_to_column("subid_target") %>%
+  mutate(subid = gsub("_.*$", "", subid_target),
+         target = gsub("^.*_", "", subid_target)) %>%
+  select(-subid_target) %>%
+  mutate(target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = 4/30,
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  gather(capacity, response, -c(subid, starts_with("target"))) %>%
+  left_join(factors_S2) %>%
+  left_join(demo_S1 %>%
+              select(ResponseId, Parent) %>%
+              rename(subid = ResponseId, parent = Parent) %>%
+              mutate(subid = as.character(subid)))
+```
+
+```{r}
+# bootstrapped means and 95% CIs
+d_cat_parent_scored_boot <- d_cat_scored %>%
+  filter(!is.na(parent)) %>%
+  group_by(parent, target, target_num, target_ord, factor, factor_names) %>%
+  multi_boot_standard("score") %>%
+  ungroup()
+```
+
+```{r, fig.width = 4, fig.asp = 0.5}
+ggplot(d_cat_parent_scored_boot,
+       aes(x = target_num, y = score, color = parent)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_parent_scored_boot, 
+            aes(y = mean, group = parent)) +
+  geom_pointrange(data = d_cat_parent_scored_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12)) +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Exact age, untransformed",
+       x = "target age (months)",
+       y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 4, fig.asp = 0.5}
+ggplot(d_cat_parent_scored_boot,
+       aes(x = target_num, y = score, color = parent)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_parent_scored_boot, 
+            aes(y = mean, group = parent)) +
+  geom_pointrange(data = d_cat_parent_scored_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12), trans = "sqrt") +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Exact age, square-root transformation",
+       x = "age after square-root transformation (months)",
+       y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 4, fig.asp = 0.5}
+ggplot(d_cat_parent_scored_boot,
+       aes(x = target_ord, y = score, color = parent)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_parent_scored_boot, 
+            aes(y = mean, group = parent)) +
+  geom_pointrange(data = d_cat_parent_scored_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Age as an ordinal variable",
+       x = "age (ordinal)",
+       y = "score (NOTE: scales differ)")
+```
+
+All of these visualizations suggest that, relative to non-parents (n = `r parent_counts$n[parent_counts$parent == "non-parent"][1]`), parents (n = `r parent_counts$n[parent_counts$parent == "parent"][1]`) tended to perceive greater abilities, in all domains except for bodily sensations. For both negative emotions and positive/social emotions, this difference is greatest in the mid-range of the target ages (12-24 months); for cognition & control, it's greater at the older end of the target ages (e.g., 3-5 years). It doesn't look like a huge effect, but it's intruiging.
+
+### Regressions
+
+There are many ways that we could choose to model this - I'll try out the factor scores first, adapting our primary regression models (not in this notebook).
+
+```{r}
+contrasts(scores_S2$parent) <- contr.treatment(2, base = 1) # baseline: NON-parents
+contrasts(scores_S2$factor) <- contr.sum(4)
+```
+
+```{r}
+r2 <- lmer(score ~ target_num * factor * parent
+           + (target_num + factor | subid),
+           scores_S2 %>%
+             mutate(target_num = target_num/12))
+summary(r2)
+```
+
+The last three coefficients here are where the action is: According to this model, the difference between parents and non-parents in perceived developmental trajectories (`target_num:parent2`, which is not significant collapsing across factors) is exaggerated in the domain of cognition and control (`target_num:factor2:parent2`) and diminished in the domain of bodily sensations (`target_num:factor3:parent2`).
+
+Let's try adding polynomial effects:
+
+```{r}
+r3 <- lmer(score ~ poly(target_num, 3) * factor * parent
+           + (poly(target_num, 1) + factor | subid),
+           scores_S2 %>%
+             mutate(target_num = target_num/12))
+summary(r3)
+```
+
+A lot to sort through here, but here are some observations:
+
+- Collapsing across factors, it seems like parents might perceive exaggerated non-linearities? (`poly(target_num, 3)2:parent2` and `poly(target_num, 3)3:parent2`)
+- Compared to collapsing across factors, not a lot of additional parent vs. non-parent differences in negative emotions (factor 1)
+- Compared to collapsing across factors, parents perceived more dramatic (linear) growth in cognition/control (factor 2; `poly(target_num, 3)1:factor2:parent2`)
+- Compared to collapsing across factors, in the domain of bodily sensations (factor 3), parents perceived less growth (`poly(target_num, 3)1:factor3:parent2`). I'm not sure how to interpret the differences in non-linearity here.
+
+You could imagine re-running any of these with a square-root transformation on target age, and/or with the 'summary scores' by category, but I'm not going to do that right now. 
+
+
