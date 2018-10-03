@@ -1,7 +1,7 @@
 ---
 title: "Baby Mental Life: Study 2"
 subtitle: "Exploratory analyses"
-date: 2018-09-14
+date: 2018-10-03
 output: 
   html_notebook:
     toc: true
@@ -747,3 +747,1200 @@ ggplot(d_cat_parent_scored_boot_S1,
 Looking quickly at these two visualizations of Study 1, I'd say that there's a hint of the same patterns in the domains of negative emotions and positive social emotions (parents attributed more than non-parents, especially at 9 months), and in cognition/control (parents attributed more than non-parents at 5 years). So, generally consistent?
 
 I won't run regression analyses just now.
+
+
+# Men vs. women
+
+## Study 2
+
+### Preliminaries
+
+```{r}
+d_gender <- d_all %>%
+  rownames_to_column("subid_target") %>%
+  mutate(subid = gsub("_.*$", "", subid_target),
+         target = gsub("^.*_", "", subid_target)) %>%
+  select(-subid_target) %>%
+  mutate(target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = 4/30,
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  gather(capacity, response, -c(subid, starts_with("target"))) %>%
+  left_join(d_demo %>%
+              select(ResponseId, GenderSex) %>%
+              rename(subid = ResponseId, gender = GenderSex) %>%
+              mutate(subid = as.character(subid)))
+```
+
+```{r, results = "asis"}
+gender_counts <- d_demo %>% 
+  distinct(ResponseId, GenderSex) %>% 
+  rename(subid = ResponseId, gender = GenderSex) %>%
+  count(gender) %>% 
+  mutate(proportion = n/sum(n))
+
+knitr::kable(gender_counts, digits = 3)
+```
+
+```{r}
+scores_S2 <- efa_S2$scores %>%
+  data.frame() %>%
+  rownames_to_column("subid_target") %>%
+  mutate(subid = gsub("_.*$", "", subid_target),
+         target = gsub("^.*_", "", subid_target)) %>%
+  select(-subid_target) %>%
+  mutate(target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = 4/30,
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  gather(factor, score, -c(subid, starts_with("target"))) %>%
+  left_join(d_gender %>% distinct(subid, gender)) %>%
+  left_join(d_cat %>% distinct(factor, factor_names)) %>%
+  mutate(factor = factor(factor), gender = factor(gender))
+```
+
+### Plots
+
+#### Factor scores
+
+```{r}
+# bootstrapped means and 95% CIs
+d_gender_boot <- scores_S2 %>%
+  filter(!is.na(gender)) %>%
+  group_by(gender, target, target_num, target_ord, factor_names) %>%
+  multi_boot_standard("score") %>%
+  ungroup() %>%
+  data.frame()
+```
+
+```{r, fig.width = 5.5, fig.asp = 0.45}
+scores_S2 %>%
+  filter(!is.na(gender)) %>%
+  ggplot(aes(x = target_num, y = score, color = gender)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.05) +
+  geom_line(data = d_gender_boot, aes(y = mean, group = gender)) +
+  geom_pointrange(data = d_gender_boot, fatten = 1.5, # note: too close to dodge
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = gender), #color = "black",
+  #             method = "lm", formula = "y ~ poly(x, 3)") +
+  scale_color_brewer(palette = "Set1") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12)) +
+  scale_y_continuous(breaks = seq(-10, 10, 0.5)) +
+  labs(title = "Developmental trajectories of factor scores, by participant gender",
+       subtitle = "Exact age, untransformed",
+       color = "gender: ",
+       x = "target age (months)", y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 5.5, fig.asp = 0.45}
+scores_S2 %>%
+  filter(!is.na(gender)) %>%
+  ggplot(aes(x = target_num, y = score, color = gender)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.05) +
+  geom_line(data = d_gender_boot, aes(y = mean, group = gender),
+            position = position_dodge(width = 0.3)) +
+  geom_pointrange(data = d_gender_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper),
+                  position = position_dodge(width = 0.3)) +
+  # geom_smooth(aes(group = gender), #color = "black",
+  #             method = "lm", formula = "y ~ poly(x, 3)") +
+  scale_color_brewer(palette = "Set1") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12), trans = "sqrt") +
+  scale_y_continuous(breaks = seq(-10, 10, 0.5)) +
+  labs(title = "Developmental trajectories of factor scores, by participant gender",
+       subtitle = "Exact age, square-root transformed",
+       color = "participant gender: ",
+       x = "age after square-root transformation (months)", 
+       y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 5.5, fig.asp = 0.45}
+scores_S2 %>%
+  filter(!is.na(gender)) %>%
+  ggplot(aes(x = target_ord, y = score, color = gender)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.05) +
+  geom_line(data = d_gender_boot, aes(y = mean, group = gender),
+            position = position_dodge(width = 0.5)) +
+  geom_pointrange(data = d_gender_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper),
+                  position = position_dodge(width = 0.5)) +
+  # geom_smooth(aes(group = gender), #color = "black",
+  #             method = "lm", formula = "y ~ poly(x, 3)") +
+  scale_color_brewer(palette = "Set1") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_y_continuous(breaks = seq(-10, 10, 0.5)) +
+  labs(title = "Developmental trajectories of factor scores, by participant gender",
+       subtitle = "Age as ordinal variable",
+       color = "participant gender: ",
+       x = "age (ordinal)", 
+       y = "score (NOTE: scales differ)")
+```
+
+#### Category 'summary scores'
+
+```{r}
+# bootstrapped means and 95% CIs
+d_cat_gender_scored_boot <- d_cat_scored %>%
+  left_join(d_demo %>% distinct(ResponseId, GenderSex) %>%
+              mutate(ResponseId = as.character(ResponseId)) %>%
+              rename(subid = ResponseId, gender = GenderSex)) %>%
+  filter(!is.na(gender)) %>%
+  group_by(gender, target, target_num, target_ord, factor, factor_names) %>%
+  multi_boot_standard("score") %>%
+  ungroup()
+```
+
+```{r, fig.width = 4, fig.asp = 0.5}
+ggplot(d_cat_gender_scored_boot,
+       aes(x = target_num, y = score, color = gender)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_gender_scored_boot, 
+            aes(y = mean, group = gender)) +
+  geom_pointrange(data = d_cat_gender_scored_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Set1") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12)) +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Exact age, untransformed",
+       x = "target age (months)",
+       y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 4, fig.asp = 0.5}
+ggplot(d_cat_gender_scored_boot,
+       aes(x = target_num, y = score, color = gender)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_gender_scored_boot, 
+            aes(y = mean, group = gender)) +
+  geom_pointrange(data = d_cat_gender_scored_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Set1") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12), trans = "sqrt") +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Exact age, square-root transformation",
+       x = "age after square-root transformation (months)",
+       y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 4, fig.asp = 1, include = F}
+ggplot(d_cat_gender_scored_boot,
+       aes(x = target_num, y = score, color = gender)) +
+  facet_wrap(~ factor_names, ncol = 4) +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_gender_scored_boot, 
+            position = position_dodge(width = 0.1),
+            aes(y = mean, group = gender)) +
+  geom_pointrange(data = d_cat_gender_scored_boot, fatten = 1.5,
+            position = position_dodge(width = 0.1),
+            aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Set1") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12), trans = "sqrt") +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Exact age, square-root transformation",
+       x = "age after square-root transformation (months)",
+       y = "score (0-100)")
+```
+
+```{r, fig.width = 4, fig.asp = 0.5}
+ggplot(d_cat_gender_scored_boot,
+       aes(x = target_ord, y = score, color = gender)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_gender_scored_boot, 
+            aes(y = mean, group = gender)) +
+  geom_pointrange(data = d_cat_gender_scored_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Set1") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Age as an ordinal variable",
+       x = "age (ordinal)",
+       y = "score (NOTE: scales differ)")
+```
+
+All of these visualizations suggest that, relative to women, men tended to perceive fewer abilities in the negative emotions domain (across the age range) and in the bodily sensations domain (especially for very young infants), and perhaps in the positive/social emotions domain (for toddlers). In contrast, if anythign men seemed to perceive more cognition & control abilities in the middle age ranges (~ 1 year). None of these are huge effects, but they are intriguing.
+
+### Regressions
+
+There are many ways that we could choose to model this - I'll try out the factor scores first, adapting our primary regression models (not in this notebook).
+
+```{r}
+contrasts(scores_S2$gender) <- contr.treatment(2, base = 1) # baseline: FEMALE
+contrasts(scores_S2$factor) <- contr.sum(4)
+```
+
+```{r}
+r2 <- lmer(score ~ target_num * factor * gender
+           + (target_num + factor | subid),
+           scores_S2 %>%
+             mutate(target_num = target_num/12))
+summary(r2)
+```
+
+The last six coefficients here are where the action is: According to this model, the difference between male and female in overall mental capacity attributions (`gender2`, which is not significant collapsing across factors and targets) is exaggerated in the domain of negative emotions (`factor1:gender2`), diminished in the domain of cognition and control (`factor2:gender2`), and neither diminshed nor exaggerated in the domain of bodily sensations (`factor3:gender2`). Meanwhile, the difference between male and female in perceived _developmental trajectories_ (`target_num:gender2`, which is not significant collapsing across factors) is (likewise) exaggerated in the domain of negative emotions (`target_num:factor1:gender2`), diminished in the domain of cognition and control (`target_num:factor2:gender2`) and exaggerated in the domain of bodily sensations (`target_num:factor3:gender2`).
+
+Let's try adding polynomial effects:
+
+```{r}
+r3 <- lmer(score ~ poly(target_num, 3) * factor * gender
+           + (poly(target_num, 1) + factor | subid),
+           scores_S2 %>%
+             mutate(target_num = target_num/12))
+summary(r3)
+```
+
+A lot to sort through here, but here are some observations:
+
+- Most of the differences across genders seem to be in the linear (not quadratic or cubic) components
+- The one exception to this is in the bodily sensations domain (factor 3), where men seem to have perceived the shape of the developmental trajectory differently both in terms of its quadratic (`poly(target_num, 2)1:factor2:gender2`) and its cubic (`poly(target_num, 3)1:factor2:gender2`) components. But I'm having a hard time interpreting the coefficients at this point.
+
+You could imagine re-running any of these with a square-root transformation on target age, and/or with the 'summary scores' by category, but I'm not going to do that right now. 
+
+
+## Study 1
+
+### Preliminaries
+
+```{r, results = "asis"}
+gender_counts_S1 <- demo_S1 %>% 
+  distinct(ResponseId, GenderSex) %>% 
+  rename(subid = ResponseId, gender = GenderSex) %>%
+  count(gender) %>% 
+  mutate(proportion = n/sum(n))
+
+knitr::kable(gender_counts_S1, digits = 3)
+```
+
+```{r}
+scores_S1 <- efa_S1$scores %>%
+  data.frame() %>%
+  rownames_to_column("subid_target") %>%
+  mutate(subid = gsub("_.*$", "", subid_target),
+         target = gsub("^.*_", "", subid_target)) %>%
+  select(-subid_target) %>%
+  mutate(target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = 4/30,
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  gather(factor, score, -c(subid, starts_with("target"))) %>%
+  left_join(demo_S1 %>% distinct(ResponseId, GenderSex) %>%
+              rename(subid = ResponseId, gender = GenderSex) %>%
+              mutate(subid = as.character(subid))) %>%
+  mutate(factor_names = recode_factor(factor,
+                                      "MR4" = "Negative emotions (S1 F4)",
+                                      "MR1" = "Cognition & control (S1 F1)",
+                                      "MR2" = "Bodily sensations (S1 F2)",
+                                      "MR3" = "Positive/social emotions (S1 F3)"),
+         factor = factor(factor))
+```
+
+### Plots
+
+#### Factor scores
+
+```{r}
+# bootstrapped means and 95% CIs
+d_gender_boot_S1 <- scores_S1 %>%
+  filter(!is.na(gender)) %>%
+  group_by(gender, target, target_num, target_ord, factor_names) %>%
+  multi_boot_standard("score") %>%
+  ungroup() %>%
+  data.frame()
+```
+
+```{r, fig.width = 5.5, fig.asp = 0.45}
+scores_S1 %>%
+  filter(gender %in% c("Female", "Male")) %>%
+  ggplot(aes(x = target_num, y = score, color = gender)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.05) +
+  geom_line(data = d_gender_boot_S1 %>%
+              filter(gender %in% c("Female", "Male")),
+            position = position_dodge(width = 5),
+            aes(y = mean, group = gender)) +
+  geom_pointrange(data = d_gender_boot_S1 %>%
+                    filter(gender %in% c("Female", "Male")), 
+                  position = position_dodge(width = 5),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = gender), #color = "black",
+  #             method = "lm", formula = "y ~ poly(x, 3)") +
+  scale_color_brewer(palette = "Set1") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12)) +
+  scale_y_continuous(breaks = seq(-10, 10, 0.5)) +
+  labs(title = "Developmental trajectories of factor scores, by participant gender (STUDY 1)",
+       subtitle = "Exact age, untransformed",
+       color = "participant gender: ",
+       x = "target age (months)", y = "score (NOTE: scales differ)")
+```
+
+I won't bother to re-plot with different treatments of age, since there are only three target ages here.
+
+#### Category 'summary scores'
+
+```{r}
+# make new dataframe
+d_cat_S1 <- d_all_S1 %>%
+  rename(subid_target = X) %>%
+  mutate(subid = gsub("_.*$", "", subid_target),
+         target = gsub("^.*_", "", subid_target)) %>%
+  select(-subid_target) %>%
+  mutate(target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = 4/30,
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  gather(capacity, response, -c(subid, starts_with("target"))) %>%
+  left_join(factors_S2) %>%
+  left_join(demo_S1 %>%
+              select(ResponseId, GenderSex) %>%
+              rename(subid = ResponseId, gender = GenderSex) %>%
+              mutate(subid = as.character(subid))) %>%
+  filter(!is.na(factor)) # drop extra items from S1 not in S2
+```
+
+And get an average "score" for each of these factors for each participant:
+
+```{r}
+d_cat_scored_S1 <- d_cat_S1 %>%
+  group_by(subid, gender, 
+           target, target_num, target_ord, 
+           factor, factor_names) %>%
+  summarise(score = mean(response, na.rm = T)) %>%
+  ungroup()
+```
+
+```{r}
+# bootstrapped means and 95% CIs
+d_cat_gender_scored_boot_S1 <- d_cat_scored_S1 %>%
+  filter(!is.na(gender)) %>%
+  group_by(gender, target, target_num, target_ord, factor, factor_names) %>%
+  multi_boot_standard("score") %>%
+  ungroup()
+```
+
+```{r, fig.width = 4.5, fig.asp = 0.45}
+ggplot(d_cat_gender_scored_boot_S1 %>%
+         filter(gender %in% c("Female", "Male")),
+       aes(x = target_num, y = score, color = gender)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_gender_scored_boot_S1 %>%
+              filter(gender %in% c("Female", "Male")),
+            position = position_dodge(width = 5),
+            aes(y = mean, group = gender)) +
+  geom_pointrange(data = d_cat_gender_scored_boot_S1 %>%
+                    filter(gender %in% c("Female", "Male")),
+                  position = position_dodge(width = 5),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Set1") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12)) +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Exact age, untransformed",
+       x = "target age (months)",
+       y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 4.5, fig.asp = 0.45}
+ggplot(d_cat_gender_scored_boot_S1 %>%
+         filter(gender %in% c("Female", "Male")),
+       aes(x = target_num, y = score, color = gender)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_gender_scored_boot_S1 %>%
+              filter(gender %in% c("Female", "Male")),
+            position = position_dodge(width = 1),
+            aes(y = mean, group = gender)) +
+  geom_pointrange(data = d_cat_gender_scored_boot_S1 %>%
+                    filter(gender %in% c("Female", "Male")),
+                  position = position_dodge(width = 1),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Set1") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12), trans = "sqrt") +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Exact age, square-root transformed",
+       x = "age after square-root transformation (months)",
+       y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 4.5, fig.asp = 0.45}
+ggplot(d_cat_gender_scored_boot_S1 %>%
+         filter(gender %in% c("Female", "Male")),
+       aes(x = target_ord, y = score, color = gender)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_gender_scored_boot_S1 %>%
+              filter(gender %in% c("Female", "Male")),
+            position = position_dodge(width = 0.5),
+            aes(y = mean, group = gender)) +
+  geom_pointrange(data = d_cat_gender_scored_boot_S1 %>%
+                    filter(gender %in% c("Female", "Male")),
+                  position = position_dodge(width = 0.5),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Set1") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  # scale_x_continuous(breaks = seq(0, 60, 12)) +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "age (ordinal)",
+       x = "target",
+       y = "score (NOTE: scales differ)")
+```
+
+Looking quickly at these two visualizations of Study 1, I'd say that they are similar to the visualizations for Study 2, both in the negative emotions and bodily domains. There a hint of more of a difference here in the positive & social emotions domain. So, generally consistent?
+
+I won't run regression analyses just now.
+
+
+# Higher vs. lower levels of education
+
+## Study 2
+
+### Preliminaries
+
+```{r}
+d_edu <- d_all %>%
+  rownames_to_column("subid_target") %>%
+  mutate(subid = gsub("_.*$", "", subid_target),
+         target = gsub("^.*_", "", subid_target)) %>%
+  select(-subid_target) %>%
+  mutate(target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = 4/30,
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  gather(capacity, response, -c(subid, starts_with("target"))) %>%
+  left_join(d_demo %>%
+              select(ResponseId, Education) %>%
+              mutate(edu = case_when(as.numeric(Education) < 8 ~ "less than a BA",
+                                     as.numeric(Education) >= 8 ~ "BA or more"),
+                     edu = factor(edu, 
+                                  levels = c("less than a BA",
+                                             "BA or more"))) %>%
+              rename(subid = ResponseId) %>%
+              mutate(subid = as.character(subid)))
+```
+
+```{r, results = "asis"}
+edu_counts <- d_demo %>% 
+  distinct(ResponseId, Education) %>% 
+  rename(subid = ResponseId, edu = Education) %>%
+  count(edu) %>% 
+  mutate(proportion = n/sum(n))
+
+knitr::kable(edu_counts, digits = 3)
+```
+
+```{r}
+scores_S2 <- efa_S2$scores %>%
+  data.frame() %>%
+  rownames_to_column("subid_target") %>%
+  mutate(subid = gsub("_.*$", "", subid_target),
+         target = gsub("^.*_", "", subid_target)) %>%
+  select(-subid_target) %>%
+  mutate(target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = 4/30,
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  gather(factor, score, -c(subid, starts_with("target"))) %>%
+  left_join(d_edu %>% distinct(subid, edu)) %>%
+  left_join(d_cat %>% distinct(factor, factor_names)) %>%
+  mutate(factor = factor(factor), edu = factor(edu))
+```
+
+### Plots
+
+#### Factor scores
+
+```{r}
+# bootstrapped means and 95% CIs
+d_edu_boot <- scores_S2 %>%
+  filter(!is.na(edu)) %>%
+  group_by(edu, target, target_num, target_ord, factor_names) %>%
+  multi_boot_standard("score") %>%
+  ungroup() %>%
+  data.frame()
+```
+
+```{r, fig.width = 5.5, fig.asp = 0.45}
+scores_S2 %>%
+  filter(!is.na(edu)) %>%
+  ggplot(aes(x = target_num, y = score, color = edu)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.05) +
+  geom_line(data = d_edu_boot, aes(y = mean, group = edu)) +
+  geom_pointrange(data = d_edu_boot, fatten = 1.5, # note: too close to dodge
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = edu), #color = "black",
+  #             method = "lm", formula = "y ~ poly(x, 3)") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12)) +
+  scale_y_continuous(breaks = seq(-10, 10, 0.5)) +
+  labs(title = "Developmental trajectories of factor scores, by participant edu",
+       subtitle = "Exact age, untransformed",
+       color = "edu: ",
+       x = "target age (months)", y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 5.5, fig.asp = 0.45}
+scores_S2 %>%
+  filter(!is.na(edu)) %>%
+  ggplot(aes(x = target_num, y = score, color = edu)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.05) +
+  geom_line(data = d_edu_boot, aes(y = mean, group = edu),
+            position = position_dodge(width = 0.3)) +
+  geom_pointrange(data = d_edu_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper),
+                  position = position_dodge(width = 0.3)) +
+  # geom_smooth(aes(group = edu), #color = "black",
+  #             method = "lm", formula = "y ~ poly(x, 3)") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12), trans = "sqrt") +
+  scale_y_continuous(breaks = seq(-10, 10, 0.5)) +
+  labs(title = "Developmental trajectories of factor scores, by participant edu",
+       subtitle = "Exact age, square-root transformed",
+       color = "participant edu: ",
+       x = "age after square-root transformation (months)", 
+       y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 5.5, fig.asp = 0.45}
+scores_S2 %>%
+  filter(!is.na(edu)) %>%
+  ggplot(aes(x = target_ord, y = score, color = edu)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.05) +
+  geom_line(data = d_edu_boot, aes(y = mean, group = edu),
+            position = position_dodge(width = 0.5)) +
+  geom_pointrange(data = d_edu_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper),
+                  position = position_dodge(width = 0.5)) +
+  # geom_smooth(aes(group = edu), #color = "black",
+  #             method = "lm", formula = "y ~ poly(x, 3)") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_y_continuous(breaks = seq(-10, 10, 0.5)) +
+  labs(title = "Developmental trajectories of factor scores, by participant edu",
+       subtitle = "Age as ordinal variable",
+       color = "participant edu: ",
+       x = "age (ordinal)", 
+       y = "score (NOTE: scales differ)")
+```
+
+#### Category 'summary scores'
+
+```{r}
+# bootstrapped means and 95% CIs
+d_cat_edu_scored_boot <- d_cat_scored %>%
+  left_join(d_demo %>% distinct(ResponseId, Education) %>%
+              mutate(ResponseId = as.character(ResponseId),
+                     edu = case_when(as.numeric(Education) < 8 ~ "less than a BA",
+                                     as.numeric(Education) >= 8 ~ "BA or more"),
+                     edu = factor(edu,
+                                  levels = c("less than a BA",
+                                             "BA or more"))) %>%
+              rename(subid = ResponseId)) %>%
+  filter(!is.na(edu)) %>%
+  group_by(edu, target, target_num, target_ord, factor, factor_names) %>%
+  multi_boot_standard("score") %>%
+  ungroup()
+```
+
+```{r, fig.width = 4, fig.asp = 0.5}
+ggplot(d_cat_edu_scored_boot,
+       aes(x = target_num, y = score, color = edu)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_edu_scored_boot, 
+            aes(y = mean, group = edu)) +
+  geom_pointrange(data = d_cat_edu_scored_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12)) +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Exact age, untransformed",
+       x = "target age (months)",
+       y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 4, fig.asp = 0.5}
+ggplot(d_cat_edu_scored_boot,
+       aes(x = target_num, y = score, color = edu)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_edu_scored_boot, 
+            aes(y = mean, group = edu)) +
+  geom_pointrange(data = d_cat_edu_scored_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12), trans = "sqrt") +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Exact age, square-root transformation",
+       x = "age after square-root transformation (months)",
+       y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 4, fig.asp = 0.5}
+ggplot(d_cat_edu_scored_boot,
+       aes(x = target_ord, y = score, color = edu)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_edu_scored_boot, 
+            aes(y = mean, group = edu)) +
+  geom_pointrange(data = d_cat_edu_scored_boot, fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Age as an ordinal variable",
+       x = "age (ordinal)",
+       y = "score (NOTE: scales differ)")
+```
+
+All of these visualizations suggest that, relative to less educated participants, more educated participants tended to perceive slightly fewer abilities in the negative emotions domain, but were otherwise generally very similar.
+
+### Regressions
+
+There are many ways that we could choose to model this - I'll try out the factor scores first, adapting our primary regression models (not in this notebook).
+
+```{r}
+contrasts(scores_S2$edu) <- contr.treatment(2, base = 1) # baseline: less educated
+contrasts(scores_S2$factor) <- contr.sum(4)
+```
+
+```{r}
+r2 <- lmer(score ~ target_num * factor * edu
+           + (target_num + factor | subid),
+           scores_S2 %>%
+             mutate(target_num = target_num/12))
+summary(r2)
+```
+
+Nada.
+
+Let's try adding polynomial effects:
+
+```{r}
+r3 <- lmer(score ~ poly(target_num, 3) * factor * edu
+           + (poly(target_num, 1) + factor | subid),
+           scores_S2 %>%
+             mutate(target_num = target_num/12))
+summary(r3)
+```
+
+Again, nothing substantial - some indications of some education-related differences in perceptions of non-linear effects? But hard to make too much sense of that.
+
+You could imagine re-running any of these with a square-root transformation on target age, and/or with the 'summary scores' by category, but I'm not going to do that right now. 
+
+
+## Study 1
+
+### Preliminaries
+
+```{r, results = "asis"}
+edu_counts_S1 <- demo_S1 %>% 
+  distinct(ResponseId, Education) %>% 
+  mutate(edu = case_when(
+    as.numeric(Education) %in% c(1, 4, 6, 7, 8) ~ "less than a BA",
+    as.numeric(Education) %in% c(2, 3, 5) ~ "BA or more"),
+         edu = factor(edu, levels = c("less than a BA", "BA or more"))) %>%
+  rename(subid = ResponseId) %>%
+  count(edu) %>% 
+  mutate(proportion = n/sum(n))
+
+knitr::kable(edu_counts_S1, digits = 3)
+```
+
+```{r}
+scores_S1 <- efa_S1$scores %>%
+  data.frame() %>%
+  rownames_to_column("subid_target") %>%
+  mutate(subid = gsub("_.*$", "", subid_target),
+         target = gsub("^.*_", "", subid_target)) %>%
+  select(-subid_target) %>%
+  mutate(target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = 4/30,
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  gather(factor, score, -c(subid, starts_with("target"))) %>%
+  left_join(demo_S1 %>% distinct(ResponseId, Education) %>%
+              mutate(edu = case_when(
+                as.numeric(Education) %in% c(1, 4, 6, 7, 8) ~ "less than a BA",
+                as.numeric(Education) %in% c(2, 3, 5) ~ "BA or more"),
+                edu = factor(edu, levels = c("less than a BA", "BA or more"))) %>%
+              rename(subid = ResponseId) %>%
+              mutate(subid = as.character(subid))) %>%
+  mutate(factor_names = recode_factor(factor,
+                                      "MR4" = "Negative emotions (S1 F4)",
+                                      "MR1" = "Cognition & control (S1 F1)",
+                                      "MR2" = "Bodily sensations (S1 F2)",
+                                      "MR3" = "Positive/social emotions (S1 F3)"),
+         factor = factor(factor))
+```
+
+### Plots
+
+#### Factor scores
+
+```{r}
+# bootstrapped means and 95% CIs
+d_edu_boot_S1 <- scores_S1 %>%
+  filter(!is.na(edu)) %>%
+  group_by(edu, target, target_num, target_ord, factor_names) %>%
+  multi_boot_standard("score") %>%
+  ungroup() %>%
+  data.frame()
+```
+
+```{r, fig.width = 5.5, fig.asp = 0.45}
+scores_S1 %>%
+  filter(!is.na(edu)) %>%
+  ggplot(aes(x = target_num, y = score, color = edu)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.05) +
+  geom_line(data = d_edu_boot_S1 %>%
+              filter(!is.na(edu)),
+            position = position_dodge(width = 5),
+            aes(y = mean, group = edu)) +
+  geom_pointrange(data = d_edu_boot_S1 %>%
+                    filter(!is.na(edu)), 
+                  position = position_dodge(width = 5),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = edu), #color = "black",
+  #             method = "lm", formula = "y ~ poly(x, 3)") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12)) +
+  scale_y_continuous(breaks = seq(-10, 10, 0.5)) +
+  labs(title = "Developmental trajectories of factor scores, by participant education (STUDY 1)",
+       subtitle = "Exact age, untransformed",
+       color = "participant edu: ",
+       x = "target age (months)", y = "score (NOTE: scales differ)")
+```
+
+I won't bother to re-plot with different treatments of age, since there are only three target ages here.
+
+#### Category 'summary scores'
+
+```{r}
+# make new dataframe
+d_cat_S1 <- d_all_S1 %>%
+  rename(subid_target = X) %>%
+  mutate(subid = gsub("_.*$", "", subid_target),
+         target = gsub("^.*_", "", subid_target)) %>%
+  select(-subid_target) %>%
+  mutate(target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = 4/30,
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  gather(capacity, response, -c(subid, starts_with("target"))) %>%
+  left_join(factors_S2) %>%
+  left_join(demo_S1 %>%
+              select(ResponseId, Education) %>%
+              mutate(edu = case_when(
+                as.numeric(Education) %in% c(1, 4, 6, 7, 8) ~ "less than a BA",
+                as.numeric(Education) %in% c(2, 3, 5) ~ "BA or more"),
+                edu = factor(edu, levels = c("less than a BA", "BA or more"))) %>%
+              rename(subid = ResponseId) %>%
+              mutate(subid = as.character(subid))) %>%
+  filter(!is.na(factor)) # drop extra items from S1 not in S2
+```
+
+And get an average "score" for each of these factors for each participant:
+
+```{r}
+d_cat_scored_S1 <- d_cat_S1 %>%
+  group_by(subid, edu, 
+           target, target_num, target_ord, 
+           factor, factor_names) %>%
+  summarise(score = mean(response, na.rm = T)) %>%
+  ungroup()
+```
+
+```{r}
+# bootstrapped means and 95% CIs
+d_cat_edu_scored_boot_S1 <- d_cat_scored_S1 %>%
+  filter(!is.na(edu)) %>%
+  group_by(edu, target, target_num, target_ord, factor, factor_names) %>%
+  multi_boot_standard("score") %>%
+  ungroup()
+```
+
+```{r, fig.width = 4.5, fig.asp = 0.45}
+ggplot(d_cat_edu_scored_boot_S1 %>%
+         filter(!is.na(edu)),
+       aes(x = target_num, y = score, color = edu)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_edu_scored_boot_S1 %>%
+              filter(!is.na(edu)),
+            position = position_dodge(width = 5),
+            aes(y = mean, group = edu)) +
+  geom_pointrange(data = d_cat_edu_scored_boot_S1 %>%
+                    filter(!is.na(edu)),
+                  position = position_dodge(width = 5),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12)) +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Exact age, untransformed",
+       x = "target age (months)",
+       y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 4.5, fig.asp = 0.45}
+ggplot(d_cat_edu_scored_boot_S1 %>%
+         filter(!is.na(edu)),
+       aes(x = target_num, y = score, color = edu)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_edu_scored_boot_S1 %>%
+              filter(!is.na(edu)),
+            position = position_dodge(width = 1),
+            aes(y = mean, group = edu)) +
+  geom_pointrange(data = d_cat_edu_scored_boot_S1 %>%
+                    filter(!is.na(edu)),
+                  position = position_dodge(width = 1),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Paired") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  scale_x_continuous(breaks = seq(0, 60, 12), trans = "sqrt") +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Exact age, square-root transformed",
+       x = "age after square-root transformation (months)",
+       y = "score (NOTE: scales differ)")
+```
+
+```{r, fig.width = 4.5, fig.asp = 0.45}
+ggplot(d_cat_edu_scored_boot_S1 %>%
+         filter(edu %in% c("Female", "Male")),
+       aes(x = target_ord, y = score, color = edu)) +
+  facet_wrap(~ factor_names, ncol = 4, scales = "free") +
+  # geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_edu_scored_boot_S1 %>%
+              filter(edu %in% c("Female", "Male")),
+            position = position_dodge(width = 0.5),
+            aes(y = mean, group = edu)) +
+  geom_pointrange(data = d_cat_edu_scored_boot_S1 %>%
+                    filter(edu %in% c("Female", "Male")),
+                  position = position_dodge(width = 0.5),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Set1") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        legend.position = "bottom") +
+  # scale_x_continuous(breaks = seq(0, 60, 12)) +
+  scale_y_continuous(breaks = seq(0, 100, 10)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "age (ordinal)",
+       x = "target",
+       y = "score (NOTE: scales differ)")
+```
+
+Looking quickly at these two visualizations of Study 1, I'd say that they are similar to the visualizations for Study 2 - perhaps a little more dramatic, especially in the negative emotions and bodily sensations domains.
+
+I won't run regression analyses just now.
+
+
+
+
+
+
