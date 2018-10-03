@@ -411,22 +411,22 @@ scoresplot_fun(efa_all_bic, target = "all (study 1)") +
 Here's a multilevel linear regression on these factor scores, with random intercepts and slopes (for target and factor) by participant. Target is coded with linear and quadratic contrasts, and factor is effect-coded for comparison with the grand mean (with the last factor as the base, -1):
 
 ```{r}
-efa_all_bic_scores <- efa_all_bic$scores[] %>%
-  data.frame() %>%
-  rownames_to_column("subid") %>%
-  mutate(target = gsub("^.*_target", "target", subid),
-         ResponseId = gsub("_target.*$", "", subid)) %>%
-  select(-subid) %>%
-  gather(factor, score, -target, -ResponseId) %>%
-  mutate_at(vars(target, factor), funs(factor))
-
-contrasts(efa_all_bic_scores$target) <- contr.poly(3)
-contrasts(efa_all_bic_scores$factor) <- contr.sum(reten_all_bic)
-
-r_all_bic <- lmer(score ~ target * factor + (target + factor | ResponseId),
-                  efa_all_bic_scores,
-                  control = lmerControl(optCtrl = list(maxfun = 100000)))
-summary(r_all_bic, corr = F)
+# efa_all_bic_scores <- efa_all_bic$scores[] %>%
+#   data.frame() %>%
+#   rownames_to_column("subid") %>%
+#   mutate(target = gsub("^.*_target", "target", subid),
+#          ResponseId = gsub("_target.*$", "", subid)) %>%
+#   select(-subid) %>%
+#   gather(factor, score, -target, -ResponseId) %>%
+#   mutate_at(vars(target, factor), funs(factor))
+# 
+# contrasts(efa_all_bic_scores$target) <- contr.poly(3)
+# contrasts(efa_all_bic_scores$factor) <- contr.sum(reten_all_bic)
+# 
+# r_all_bic <- lmer(score ~ target * factor + (target + factor | ResponseId),
+#                   efa_all_bic_scores,
+#                   control = lmerControl(optCtrl = list(maxfun = 100000)))
+# summary(r_all_bic, corr = F)
 ```
 
 If we consider t-values > 2 to be "significant" and use the plot above to guide our interpretation, here's what we conclude:
@@ -834,12 +834,59 @@ ggplot(d_demo, aes(x = Age)) +
        y = "Number of participants")
 ```
 
+```{r, fig.width = 3, fig.asp = 1}
+efa_all_par_scores %>%
+  mutate(ResponseId = as.character(ResponseId)) %>%
+  left_join(d_demo %>% 
+              distinct(ResponseId, Age) %>% 
+              mutate(ResponseId = as.character(ResponseId))) %>%
+  mutate(factor = factor(factor,
+                         levels = c("MR1", "MR3", "MR2", "MR4"),
+                         labels = c("cognition & control", 
+                                    "positive & social emotions",
+                                    "bodily sensations",
+                                    "negative emotions"))) %>%
+  ggplot(aes(x = Age, y = score)) +
+  geom_hline(yintercept = 0, lty = 2) +
+  facet_grid(factor ~ target, scales = "free") +
+  # geom_point(alpha = 0.05) +
+  geom_smooth(method = "lm") +
+  scale_y_continuous(breaks = seq(-10, 10, 1))
+```
+
 ```{r}
 ggplot(d_demo, aes(x = GenderSex)) + 
   geom_bar() +
   labs(title = "Particpiant gender/sex (self-reported)",
        x = "Gender/sex",
        y = "Number of participants")
+```
+
+```{r, fig.width = 3, fig.asp = 1}
+efa_all_par_scores %>%
+  mutate(ResponseId = as.character(ResponseId)) %>%
+  left_join(d_demo %>% 
+              distinct(ResponseId, GenderSex) %>% 
+              mutate(ResponseId = as.character(ResponseId))) %>%
+  filter(GenderSex %in% c("Female", "Male")) %>%
+  mutate(factor = factor(factor,
+                         levels = c("MR1", "MR3", "MR2", "MR4"),
+                         labels = c("cognition & control", 
+                                    "positive & social emotions",
+                                    "bodily sensations",
+                                    "negative emotions"))) %>%
+  ggplot(aes(x = GenderSex, y = score)) +
+  facet_grid(factor ~ target, scales = "free") +
+  geom_hline(yintercept = 0, lty = 2) +
+  # geom_jitter(alpha = 0.05, height = 0) +
+  geom_pointrange(data = . %>% 
+                    group_by(target, factor, GenderSex) %>%
+                    multi_boot_standard(col = "score") %>%
+                    ungroup(),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper),
+                  fatten = 1, color = "blue") +
+  scale_y_continuous(breaks = seq(-10, 10, 1)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
 
 ```{r}
@@ -871,6 +918,37 @@ ggplot(d_demo, aes(x = factor(Education,
        y = "Number of participants")
 ```
 
+```{r, fig.width = 3, fig.asp = 1}
+efa_all_par_scores %>%
+  mutate(ResponseId = as.character(ResponseId)) %>%
+  left_join(d_demo %>% 
+              distinct(ResponseId, Education) %>% 
+              mutate(ResponseId = as.character(ResponseId))) %>%
+  mutate(factor = factor(factor,
+                         levels = c("MR1", "MR3", "MR2", "MR4"),
+                         labels = c("cognition & control", 
+                                    "positive & social emotions",
+                                    "bodily sensations",
+                                    "negative emotions")),
+         hi_low_ed = case_when(
+           as.numeric(Education) < 8 ~ "less than BA",
+           as.numeric(Education) >= 8 ~ "BA or more"),
+         hi_low_ed = factor(hi_low_ed,
+                            levels =c("less than BA", "BA or more"))) %>%
+  ggplot(aes(x = hi_low_ed, y = score)) +
+  facet_grid(factor ~ target, scales = "free") +
+  geom_hline(yintercept = 0, lty = 2) +
+  # geom_jitter(alpha = 0.05, height = 0) +
+  geom_pointrange(data = . %>% 
+                    group_by(target, factor, hi_low_ed) %>%
+                    multi_boot_standard(col = "score") %>%
+                    ungroup(),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper),
+                  fatten = 1, color = "blue") +
+  scale_y_continuous(breaks = seq(-10, 10, 1)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
 ```{r}
 ggplot(d_demo, aes(x = Income)) + 
   geom_bar() +
@@ -878,6 +956,38 @@ ggplot(d_demo, aes(x = Income)) +
   labs(title = "Particpiant household income (self-reported)",
        x = "Annual household income",
        y = "Number of participants")
+```
+
+```{r, fig.width = 3, fig.asp = 1}
+efa_all_par_scores %>%
+  mutate(ResponseId = as.character(ResponseId)) %>%
+  left_join(d_demo %>% 
+              distinct(ResponseId, Income) %>% 
+              mutate(ResponseId = as.character(ResponseId))) %>%
+  mutate(factor = factor(factor,
+                         levels = c("MR1", "MR3", "MR2", "MR4"),
+                         labels = c("cognition & control", 
+                                    "positive & social emotions",
+                                    "bodily sensations",
+                                    "negative emotions")),
+         hi_low_inc = case_when(
+           as.numeric(Income) < 4 ~ "less than $60,001",
+           as.numeric(Income) >= 4 ~ "$60,001 or more"),
+         hi_low_inc = factor(hi_low_inc,
+                             levels =c("less than $60,001", "$60,001 or more"))) %>%
+  filter(!is.na(hi_low_inc)) %>%
+  ggplot(aes(x = hi_low_inc, y = score)) +
+  facet_grid(factor ~ target, scales = "free") +
+  geom_hline(yintercept = 0, lty = 2) +
+  # geom_jitter(alpha = 0.05, height = 0) +
+  geom_pointrange(data = . %>% 
+                    group_by(target, factor, hi_low_inc) %>%
+                    multi_boot_standard(col = "score") %>%
+                    ungroup(),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper),
+                  fatten = 1, color = "blue") +
+  scale_y_continuous(breaks = seq(-10, 10, 1)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 ```
 
 ```{r}
@@ -910,12 +1020,39 @@ ggplot(d_demo, aes(x = Parent)) +
        y = "Number of participants")
 ```
 
+```{r, fig.width = 3, fig.asp = 1}
+efa_all_par_scores %>%
+  mutate(ResponseId = as.character(ResponseId)) %>%
+  left_join(d_demo %>% 
+              distinct(ResponseId, Parent) %>% 
+              mutate(ResponseId = as.character(ResponseId))) %>%
+  filter(!is.na(Parent)) %>%
+  mutate(factor = factor(factor,
+                         levels = c("MR1", "MR3", "MR2", "MR4"),
+                         labels = c("cognition & control", 
+                                    "positive & social emotions",
+                                    "bodily sensations",
+                                    "negative emotions"))) %>%
+  ggplot(aes(x = Parent, y = score)) +
+  facet_grid(factor ~ target, scales = "free") +
+  geom_hline(yintercept = 0, lty = 2) +
+  # geom_jitter(alpha = 0.05, height = 0) +
+  geom_pointrange(data = . %>% 
+                    group_by(target, factor, Parent) %>%
+                    multi_boot_standard(col = "score") %>%
+                    ungroup(),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper),
+                  fatten = 1, color = "blue") +
+  scale_y_continuous(breaks = seq(-10, 10, 1)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+```
+
 ```{r}
 ggplot(d_demo %>% filter(Parent == "Yes"), aes(x = ChildrenNumber)) + 
   geom_histogram(binwidth = 1) +
   geom_vline(xintercept = median(d_demo[d_demo$Parent == "Yes",]$ChildrenNumber, na.rm = T), 
              color = "blue", lty = 2) +
-  scale_x_continuous(breaks = seq(0, 10000, 1)) +
+  scale_x_continuous(breaks = seq(-1, 10000, 1)) +
   labs(title = "Number of children among parents (self-reported)",
        subtitle = "Blue dotted line marks median",
        x = "Number of children (among parents)",
