@@ -127,6 +127,52 @@ d_cat <- d_all %>%
               mutate(subid = as.character(subid)))
 ```
 
+Check reliability (Cronbach's alpha):
+
+```{r}
+d_cat %>% 
+  filter(factor == "MR1") %>% 
+  mutate(subid_target = paste(subid, target, sep = "_")) %>%
+  select(subid_target, capacity, response) %>%
+  spread(capacity, response) %>%
+  column_to_rownames("subid_target") %>%
+  cor() %>%
+  alpha(title = "MR1: Negative emotions")
+```
+
+```{r}
+d_cat %>% 
+  filter(factor == "MR2") %>% 
+  mutate(subid_target = paste(subid, target, sep = "_")) %>%
+  select(subid_target, capacity, response) %>%
+  spread(capacity, response) %>%
+  column_to_rownames("subid_target") %>%
+  cor() %>%
+  alpha(title = "MR2: Cognition & control")
+```
+
+```{r}
+d_cat %>% 
+  filter(factor == "MR3") %>% 
+  mutate(subid_target = paste(subid, target, sep = "_")) %>%
+  select(subid_target, capacity, response) %>%
+  spread(capacity, response) %>%
+  column_to_rownames("subid_target") %>%
+  cor() %>%
+  alpha(title = "MR3: Bodily sensations")
+```
+
+```{r}
+d_cat %>% 
+  filter(factor == "MR4") %>% 
+  mutate(subid_target = paste(subid, target, sep = "_")) %>%
+  select(subid_target, capacity, response) %>%
+  spread(capacity, response) %>%
+  column_to_rownames("subid_target") %>%
+  cor() %>%
+  alpha(title = "MR4: Social abilities & positive emotions")
+```
+
 And get an average "score" for each of these factors for each participant:
 
 ```{r}
