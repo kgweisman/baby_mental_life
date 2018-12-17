@@ -1,0 +1,514 @@
+---
+title: "Baby Mental Life: Study 2"
+subtitle: "Individual regressions"
+date: 2018-12-17
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+---
+
+"Baby Mental Life: Study 2" was conducted on MTurk on 2018-08-04.
+
+Our planned sample was 300 participants, and we anticipated that roughly 80% of recruited participants would pass all of our attention checks, so we initially recruited 378 participants (on the idea that ~80% of 378 ~ 300 participants; note that for administrative purposes we need to recuit participants in batches that were divisible by 9). After filtering out participants who failed at least one of our attention checks, we ended up retaining fewer than 300 participants, so we recruited an additional 16 participants for a total of 394 people recruited. At each stage, we recruited women and men through separate studies, in hopes of acquiring a roughly equal split between genders.
+
+In the end, we ended up with a sample of 304 participants who passed our attention checks, 237 of whom came from unique GPS coordinates.
+
+**For this first pass, these data _exclude_ participants where there is another participant with an identical set of GPS coordinates as recorded by Qualtrics.**
+
+Each participant assessed children's mental capacities at 13 target ages between the ages of 0 and 5 years. For each target, they rated 20 mental capacities on a scale from 0 (not at all capable) to 100 (completely capable). 
+
+For more details about the study, see our preregistration [here](https://osf.io/j72dg/). 
+
+**Here we run some individual-level regressions on these data.**
+
+```{r}
+# load required libraries
+library(tidyverse)
+library(langcog) # source: https://github.com/langcog/langcog-package
+library(psych)
+library(lme4)
+library(kableExtra)
+
+# set theme for ggplots
+theme_set(theme_bw())
+```
+
+```{r}
+# run source code (extra home-made functions)
+source("./scripts/max_factors_efa.R")
+source("./scripts/plot_fun.R")
+source("./scripts/reten_fun.R")
+source("./scripts/table_fun.R")
+source("./scripts/data_prep.R")
+```
+
+# Treating factors as categories
+
+## Preliminaries
+
+First, I'll do the factor analysis, and get a list of the top 5 items by factor:
+
+```{r}
+# load in S1 efa in case we need it
+efa_S1 <- readRDS("../study 1/s1_efa.rds")
+d_all_S1 <- read.csv("../study 1/s1_data.csv")
+demo_S1 <- read.csv("../study 1/s1_demo.csv")
+```
+
+```{r}
+# conduct S2 efa
+efa_S2 <- fa(d_all, nfactors = 4, rotate = "oblimin", fm = "minres",
+             scores = "tenBerge", impute = "median")
+```
+
+```{r}
+table_fun(efa_S2, num_items = 5, pos_abs = "abs")
+```
+
+Now I'll use this to define categories of mental capacities:
+
+```{r}
+# get items by factor
+factors_S2 <- efa_S2$loadings[] %>%
+  data.frame() %>%
+  rownames_to_column("capacity") %>%
+  gather(factor, loading, -capacity) %>%
+  group_by(capacity) %>%
+  top_n(1, loading) %>%
+  ungroup() %>%
+  select(-loading) %>%
+  mutate(factor_names = recode_factor(factor,
+                                      "MR1" = "Negative emotions",
+                                      "MR2" = "Cognition & control",
+                                      "MR3" = "Bodily sensations",
+                                      "MR4" = "Positive/social emotions"),
+         factor = factor(factor))
+
+# make new dataframe
+d_cat <- d_all %>%
+  rownames_to_column("subid_target") %>%
+  mutate(subid = gsub("_.*$", "", subid_target),
+         target = gsub("^.*_", "", subid_target)) %>%
+  select(-subid_target) %>%
+  mutate(target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = 4/30,
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  gather(capacity, response, -c(subid, starts_with("target"))) %>%
+  left_join(factors_S2) %>%
+  left_join(d_demo %>%
+              select(ResponseId, Parent) %>%
+              rename(subid = ResponseId, parent = Parent) %>%
+              mutate(subid = as.character(subid)))
+```
+
+Check reliability (Cronbach's alpha):
+
+```{r}
+d_cat %>% 
+  filter(factor == "MR1") %>% 
+  mutate(subid_target = paste(subid, target, sep = "_")) %>%
+  select(subid_target, capacity, response) %>%
+  spread(capacity, response) %>%
+  column_to_rownames("subid_target") %>%
+  cor() %>%
+  alpha(title = "MR1: Negative emotions")
+```
+
+```{r}
+d_cat %>% 
+  filter(factor == "MR2") %>% 
+  mutate(subid_target = paste(subid, target, sep = "_")) %>%
+  select(subid_target, capacity, response) %>%
+  spread(capacity, response) %>%
+  column_to_rownames("subid_target") %>%
+  cor() %>%
+  alpha(title = "MR2: Cognition & control")
+```
+
+```{r}
+d_cat %>% 
+  filter(factor == "MR3") %>% 
+  mutate(subid_target = paste(subid, target, sep = "_")) %>%
+  select(subid_target, capacity, response) %>%
+  spread(capacity, response) %>%
+  column_to_rownames("subid_target") %>%
+  cor() %>%
+  alpha(title = "MR3: Bodily sensations")
+```
+
+```{r}
+d_cat %>% 
+  filter(factor == "MR4") %>% 
+  mutate(subid_target = paste(subid, target, sep = "_")) %>%
+  select(subid_target, capacity, response) %>%
+  spread(capacity, response) %>%
+  column_to_rownames("subid_target") %>%
+  cor() %>%
+  alpha(title = "MR4: Social abilities & positive emotions")
+```
+
+And get an average "score" for each of these factors for each participant:
+
+```{r}
+d_cat_scored <- d_cat %>%
+  group_by(subid, parent, 
+           target, target_num, target_ord, 
+           factor, factor_names) %>%
+  summarise(score = mean(response, na.rm = T)) %>%
+  ungroup()
+```
+
+
+## Plots
+
+```{r}
+# bootstrapped means and 95% CIs
+d_cat_scored_boot <- d_cat_scored %>%
+  group_by(target, target_num, target_ord, factor, factor_names) %>%
+  multi_boot_standard("score") %>%
+  ungroup()
+```
+
+```{r, fig.width = 4, fig.asp = 0.5}
+ggplot(d_cat_scored,
+       aes(x = target_num, y = score, color = factor_names)) +
+  facet_grid(~ factor_names) +
+  geom_line(aes(group = subid), alpha = 0.15) +
+  geom_line(data = d_cat_scored_boot, color = "black",
+            aes(y = mean, group = factor_names)) +
+  geom_pointrange(data = d_cat_scored_boot, color = "black", fatten = 1.5,
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper)) +
+  # geom_smooth(aes(group = factor_names),
+  #             method = "lm", formula = "y ~ poly(x, 3)",
+  #             color = "black") +
+  scale_color_brewer(palette = "Set2", guide = "none") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  scale_x_continuous(breaks = seq(0, 60, 12)) +
+  labs(title = "Developmental trajectories of category 'summary scores'",
+       subtitle = "Exact age, untransformed",
+       x = "target age (months)")
+```
+
+
+## Regression
+
+```{r}
+# contrasts(d_cat_scored$factor) <- cbind(cog_gm = c(-1, 1, 0, 0),
+#                                         bod_gm = c(-1, 0, 1, 0),
+#                                         pos_gm = c(-1, 0, 0, 1))
+# 
+# r1 <- lmer(score ~ factor * poly(target_num, 3) + 
+#              (1 + factor + poly(target_num, 1) | subid),
+#            d_cat_scored %>%
+#              mutate(target_num = scale(target_num, center = F)))
+#            # control = lmerControl(optCtrl = list(maxfun = 1e5))) # source: https://stat.ethz.ch/pipermail/r-sig-mixed-models/2014q2/022084.html
+# 
+# summary(r1)
+```
+
+```{r, fig.width = 4, fig.asp = 0.25}
+# ranef(r1) %>%
+#   data.frame() %>%
+#   ggplot(aes(x = condval)) +
+#   facet_grid(~term, scales = "free") +
+#   geom_histogram() +
+#   geom_vline(xintercept = 0, lty = 2, color = "blue")
+```
+
+
+# Individual regressions
+
+```{r}
+subids <- levels(factor(d_cat_scored$subid)) %>% as.numeric()
+```
+
+```{r}
+# reminder of contrasts
+contrasts(d_cat_scored$factor)
+```
+
+
+```{r}
+reg_fun <- function(this_subid){
+  r <- lm(score ~ factor * poly(target_num, 3),
+          d_cat_scored %>% filter(subid == this_subid))
+  
+  coeffs <- summary(r)$coefficients %>%
+    data.frame() %>%
+    rownames_to_column("param") %>%
+    mutate(subid = this_subid)
+  
+  return(coeffs)
+}
+
+indiv_coeffs <- data.frame(param = character(),
+                           Estimate = numeric(),
+                           Std..Error = numeric(),
+                           t.value = numeric(),
+                           Pr...t.. = numeric(),
+                           subid = numeric())
+for(i in 1:length(subids)){
+  current_coeffs <- reg_fun(subids[i])
+  indiv_coeffs <- indiv_coeffs %>%
+    full_join(current_coeffs)
+}
+
+indiv_coeffs <- indiv_coeffs %>%
+  rename(b = Estimate,
+         b_se = Std..Error,
+         t = t.value,
+         t_p = Pr...t..)
+```
+
+```{r, fig.width = 5, fig.asp = 1}
+indiv_coeffs %>%
+  mutate(signif = case_when(t_p < 0.00001 ~ "p < 0.00001", 
+                            t_p < 0.0001 ~ "p < 0.0001",
+                            t_p < 0.001 ~ "p < 0.001",
+                            t_p < 0.01 ~ "p < 0.01",
+                            t_p < 0.05 ~ "p < 0.05",
+                            t_p >= 0.05 ~ "n.s."),
+         signif = factor(signif,
+                         levels = c("n.s.", "p < 0.05", "p < 0.01", "p < 0.001",
+                                    "p < 0.0001", "p < 0.00001")),
+         param = recode_factor(param,
+                               "(Intercept)" = "overall at birth",
+                               "poly(target_num, 3)1" = "overall linear",
+                               "poly(target_num, 3)2" = "overall quadratic",
+                               "poly(target_num, 3)3" = "overall cubic",
+                               "factorbod_gm" = "bodily at birth vs. GM",
+                               "factorbod_gm:poly(target_num, 3)1" = 
+                                 "bodily linear vs. GM",
+                               "factorbod_gm:poly(target_num, 3)2" = 
+                                 "bodily quadratic vs. GM",
+                               "factorbod_gm:poly(target_num, 3)3" = 
+                                 "bodily cubic vs. GM",
+                               "factorcog_gm" = "cognitive at birth vs. GM",
+                               "factorcog_gm:poly(target_num, 3)1" = 
+                                 "cognitive linear vs. GM",
+                               "factorcog_gm:poly(target_num, 3)2" = 
+                                 "cognitive quadratic vs. GM",
+                               "factorcog_gm:poly(target_num, 3)3" = 
+                                 "cognitive cubic vs. GM",
+                               "factorpos_gm" = "positive at birth vs. GM",
+                               "factorpos_gm:poly(target_num, 3)1" = 
+                                 "positive linear vs. GM",
+                               "factorpos_gm:poly(target_num, 3)2" = 
+                                 "positive quadratic vs. GM",
+                               "factorpos_gm:poly(target_num, 3)3" = 
+                                 "positive cubic vs. GM"),
+         factor = case_when(grepl("overall", param) ~ "overall",
+                            # grepl("neg", param) ~ "negative emotions",
+                            grepl("bod", param) ~ "bodily sensations",
+                            grepl("cog", param) ~ "cognition & control",
+                            grepl("pos", param) ~ "positive/social emotions"),
+         factor = factor(factor,
+                         levels = c("overall",
+                                    #"negative emotions", 
+                                    "cognition & control",
+                                    "bodily sensations",  
+                                    "positive/social emotions"))) %>%
+  ggplot(aes(x = b, fill = factor, alpha = signif)) +
+  facet_wrap(~ param, scales = "free") +
+  geom_histogram(fill = "black", alpha = 1) +
+  geom_histogram() +
+  # scale_fill_brewer(palette = "Set2", na.value = "gray")
+  scale_fill_manual(values = c("#a6d854", "#fc8d62", "#8da0cb", "#e78ac3"))
+```
+
+```{r, fig.width = 5, fig.asp = 1, include = F}
+indiv_coeffs %>%
+  mutate(signif = case_when(t_p < 0.00001 ~ "p < 0.00001", 
+                            t_p < 0.0001 ~ "p < 0.0001",
+                            t_p < 0.001 ~ "p < 0.001",
+                            t_p < 0.01 ~ "p < 0.01",
+                            t_p < 0.05 ~ "p < 0.05",
+                            t_p >= 0.05 ~ "n.s."),
+         signif = factor(signif,
+                         levels = c("n.s.", "p < 0.05", "p < 0.01", "p < 0.001",
+                                    "p < 0.0001", "p < 0.00001")),
+         param = recode_factor(param,
+                               "(Intercept)" = "overall at birth",
+                               "poly(target_num, 3)1" = "overall linear",
+                               "poly(target_num, 3)2" = "overall quadratic",
+                               "poly(target_num, 3)3" = "overall cubic",
+                               "factorbod_gm" = "bodily at birth vs. GM",
+                               "factorbod_gm:poly(target_num, 3)1" = 
+                                 "bodily linear vs. GM",
+                               "factorbod_gm:poly(target_num, 3)2" = 
+                                 "bodily quadratic vs. GM",
+                               "factorbod_gm:poly(target_num, 3)3" = 
+                                 "bodily cubic vs. GM",
+                               "factorcog_gm" = "cognitive at birth vs. GM",
+                               "factorcog_gm:poly(target_num, 3)1" = 
+                                 "cognitive linear vs. GM",
+                               "factorcog_gm:poly(target_num, 3)2" = 
+                                 "cognitive quadratic vs. GM",
+                               "factorcog_gm:poly(target_num, 3)3" = 
+                                 "cognitive cubic vs. GM",
+                               "factorpos_gm" = "positive at birth vs. GM",
+                               "factorpos_gm:poly(target_num, 3)1" = 
+                                 "positive linear vs. GM",
+                               "factorpos_gm:poly(target_num, 3)2" = 
+                                 "positive quadratic vs. GM",
+                               "factorpos_gm:poly(target_num, 3)3" = 
+                                 "positive cubic vs. GM")) %>%
+  ggplot(aes(x = b, fill = signif)) +
+  facet_wrap(~ param, scales = "free") +
+  geom_histogram(fill = "black", color = "black") +
+  geom_histogram() +
+  scale_fill_brewer(palette = "Blues", na.value = "gray")
+  # scale_fill_manual(values = c("gray", "turquoise"))
+```
+
+```{r, fig.width = 5, fig.asp = 2, include = F}
+d_cat_scored %>%
+  ggplot(aes(x = target_num, y = score, color = factor_names)) +
+  facet_wrap(~ subid) +
+  geom_line() +
+  scale_color_brewer(palette = "Set2") +
+  theme(legend.position = "top")
+```
+
+```{r}
+indiv_coeffs %>%
+  select(subid, param, b) %>%
+  spread(param, b) %>%
+  arrange(desc(`factorbod_gm:poly(target_num, 3)1`),
+          desc(`factorbod_gm:poly(target_num, 3)2`),
+          desc(`factorbod_gm:poly(target_num, 3)3`)) %>%
+  mutate(order = 1:length(subids)) %>%
+  distinct(subid, order)
+```
+
+
+```{r, fig.width = 6, fig.asp = 1.5}
+d_cat_scored %>%
+  filter(factor == "MR3") %>% # MR3 = bodily sensations
+  full_join(d_cat_scored %>%
+              filter(target_num == 0, factor == "MR3") %>%
+              distinct(subid, score) %>%
+              arrange(score) %>%
+              mutate(order = 1:length(subids),
+                     subid = as.character(subid)) %>%
+              distinct(subid, order)) %>%
+  # full_join(indiv_coeffs %>%
+  #             select(subid, param, b) %>%
+  #             spread(param, b) %>%
+  #             arrange(`factorbod_gm`) %>%
+  #             # arrange(desc(`factorbod_gm:poly(target_num, 3)1`)) %>%
+  #             mutate(order = 1:length(subids),
+  #                    subid = as.character(subid)) %>%
+  #             distinct(subid, order)) %>%
+  ggplot(aes(x = target_num, y = score)) + 
+  facet_wrap(~ reorder(subid, order)) +
+  geom_line(color = "#8da0cb", size = 1) +
+  labs(title = "Bodily sensations",
+       # subtitle = "Ordered by coefficient of bodily sensations (vs. GM)")
+       subtitle = "Ordered by perceived bodily sensations at birth")
+```
+
+```{r, fig.width = 6, fig.asp = 1.5}
+d_cat_scored %>%
+  filter(factor == "MR2") %>% # MR2 = cognition & control
+  full_join(d_cat_scored %>%
+              filter(target_num == 0, factor == "MR2") %>%
+              distinct(subid, score) %>%
+              arrange(score) %>%
+              mutate(order = 1:length(subids),
+                     subid = as.character(subid)) %>%
+              distinct(subid, order)) %>%
+  # full_join(indiv_coeffs %>%
+  #             select(subid, param, b) %>%
+  #             spread(param, b) %>%
+  #             arrange(`factorcog_gm`) %>%
+  #             # arrange(desc(`factorcog_gm:poly(target_num, 3)1`)) %>%
+  #             mutate(order = 1:length(subids),
+  #                    subid = as.character(subid)) %>%
+  #             distinct(subid, order)) %>%
+  ggplot(aes(x = target_num, y = score)) + 
+  facet_wrap(~ reorder(subid, order)) +
+  geom_line(color = "#fc8d62", size = 1) +
+  labs(title = "Cognition & control",
+       # subtitle = "Ordered by coefficient of cognition & control (vs. GM)")
+       subtitle = "Ordered by perceived cognition & control at birth")
+```
+
+```{r, fig.width = 6, fig.asp = 1.5}
+d_cat_scored %>%
+  filter(factor == "MR4") %>% # MR4 = positive/social emotions
+  full_join(d_cat_scored %>%
+              filter(target_num == 0, factor == "MR4") %>%
+              distinct(subid, score) %>%
+              arrange(score) %>%
+              mutate(order = 1:length(subids),
+                     subid = as.character(subid)) %>%
+              distinct(subid, order)) %>%
+  # full_join(indiv_coeffs %>%
+  #             select(subid, param, b) %>%
+  #             spread(param, b) %>%
+  #             arrange(`factorpos_gm`) %>%
+  #             # arrange(desc(`factorpos_gm:poly(target_num, 3)1`)) %>%
+  #             mutate(order = 1:length(subids),
+  #                    subid = as.character(subid)) %>%
+  #             distinct(subid, order)) %>%
+  ggplot(aes(x = target_num, y = score)) + 
+  facet_wrap(~ reorder(subid, order)) +
+  geom_line(color = "#e78ac3", size = 1) +
+  labs(title = "Positive/social emotions",
+       # subtitle = "Ordered by coefficient of positive/social emotions (vs. GM)")
+       subtitle = "Ordered by perceived positive/social emotions at birth")
+```
+
+```{r, fig.width = 6, fig.asp = 1.5}
+d_cat_scored %>%
+  filter(factor == "MR1") %>% # MR1 = negative emotions
+  full_join(d_cat_scored %>%
+              filter(target_num == 0, factor == "MR1") %>%
+              distinct(subid, score) %>%
+              arrange(score) %>%
+              mutate(order = 1:length(subids),
+                     subid = as.character(subid)) %>%
+              distinct(subid, order)) %>%
+  # full_join(indiv_coeffs %>%
+  #             select(subid, param, b) %>%
+  #             spread(param, b) %>%
+  #             arrange(`factorneg_gm`) %>%
+  #             # arrange(desc(`factorneg_gm:poly(target_num, 3)1`)) %>%
+  #             mutate(order = 1:length(subids),
+  #                    subid = as.character(subid)) %>%
+  #             distinct(subid, order)) %>%
+  ggplot(aes(x = target_num, y = score)) + 
+  facet_wrap(~ reorder(subid, order)) +
+  geom_line(color = "#66c2a5", size = 1) +
+  labs(title = "Negative emotions",
+       # subtitle = "Ordered by coefficient of negative emotions (vs. GM)")
+       subtitle = "Ordered by perceived negative emotions at birth")
+```

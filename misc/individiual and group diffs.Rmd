@@ -1,0 +1,95 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+ids <- levels(factor(d$ResponseId))
+```
+
+```{r}
+df_fun <- function(df){
+  
+  df_expand <- df %>%
+    rownames_to_column("ResponseId_target") %>%
+    mutate(ResponseId = gsub("_.*$", "", ResponseId_target),
+           target = gsub("^.*_", "", ResponseId_target))
+  
+  ids <- levels(factor(df_expand$ResponseId))
+  
+  df_list <- list(NULL)
+  for(i in 1:length(ids)){
+    df_list[[i]] <- df_expand %>%
+      filter(ResponseId == ids[i]) %>%
+      select(-ResponseId, -target) %>%
+      column_to_rownames("ResponseId_target")
+  }
+  
+  return(df_list)
+}
+  
+temp_list <- df_fun(d_all)
+```
+
+```{r, fig.width = 8, fig.asp = 1}
+clust_plot_fun <- function(list){
+  
+  clust_plot_list <- list(NULL)
+  for(i in 1:length(list)){
+    clust_plot_list[[i]] <- list[[i]] %>%
+      t() %>%
+      dist(method = "euclidean", diag = TRUE, upper = TRUE) %>%
+      as.matrix() %>%
+      corrplot::corrplot(is.corr = F, order = "FPC", tl.col = "black")
+  }
+  
+  return(clust_plot_list)
+}
+
+# temp_clust_plot_list <- clust_plot_fun(temp_list)
+```
+
+
+```{r}
+parent_ids <- d %>%
+  filter(Parent == "Yes") %>%
+  select(ResponseId)
+```
+
+```{r, fig.width = 5, fig.asp = 1}
+d_parent <- d_all %>%
+  rownames_to_column("temp") %>%
+  mutate(ResponseId = gsub("_.*$", "", temp)) %>%
+  filter(ResponseId %in% parent_ids$ResponseId) %>%
+  select(-ResponseId) %>%
+  column_to_rownames("temp")
+
+fa.parallel(d_parent)
+
+d_parent %>%
+  fa(3, rotate = "oblimin") %>%
+  heatmap_fun()
+
+d_parent %>%
+  fa(4, rotate = "oblimin") %>%
+  heatmap_fun()
+```
+
+```{r, fig.width = 5, fig.asp = 1}
+d_nonparent <- d_all %>%
+  rownames_to_column("temp") %>%
+  mutate(ResponseId = gsub("_.*$", "", temp)) %>%
+  filter(!ResponseId %in% parent_ids$ResponseId) %>%
+  select(-ResponseId) %>%
+  column_to_rownames("temp")
+
+fa.parallel(d_nonparent)
+
+d_nonparent %>%
+  fa(3, rotate = "oblimin") %>%
+  heatmap_fun()
+
+d_nonparent %>%
+  fa(4, rotate = "oblimin") %>%
+  heatmap_fun()
+```
