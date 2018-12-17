@@ -198,9 +198,9 @@ d_all %>%
               color = "black") +
   scale_color_brewer(palette = "Set2", guide = "none") +
   # scale_x_discrete("target age (ordinal)") +
-  # scale_x_continuous("target age (months)", breaks = seq(0, 60, 12)) +
-  scale_x_continuous("age after square-root transformation (months)", 
-                     breaks = seq(0, 60, 12), trans = "sqrt") +
+  scale_x_continuous("target age (months)", breaks = seq(0, 60, 12)) +
+  # scale_x_continuous("age after square-root transformation (months)", 
+  #                    breaks = seq(0, 60, 12), trans = "sqrt") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
   guides(color = guide_legend(override.aes = list(alpha = 1)))
 ```
