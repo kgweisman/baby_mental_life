@@ -220,26 +220,64 @@ ggplot(d_cat_scored,
 ## Regression
 
 ```{r}
-# contrasts(d_cat_scored$factor) <- cbind(cog_gm = c(-1, 1, 0, 0),
-#                                         bod_gm = c(-1, 0, 1, 0),
-#                                         pos_gm = c(-1, 0, 0, 1))
-# 
-# r1 <- lmer(score ~ factor * poly(target_num, 3) + 
-#              (1 + factor + poly(target_num, 1) | subid),
-#            d_cat_scored %>%
-#              mutate(target_num = scale(target_num, center = F)))
-#            # control = lmerControl(optCtrl = list(maxfun = 1e5))) # source: https://stat.ethz.ch/pipermail/r-sig-mixed-models/2014q2/022084.html
-# 
-# summary(r1)
+contrasts(d_cat_scored$factor) <- cbind(cog_gm = c(-1, 1, 0, 0),
+                                        bod_gm = c(-1, 0, 1, 0),
+                                        pos_gm = c(-1, 0, 0, 1))
+
+r1 <- lmer(score ~ factor * poly(target_num, 3, raw = T) + # without adding raw = T takes >2hr to run (never finished)
+             (1 + factor * poly(target_num, 2, raw = T) | subid),
+           d_cat_scored %>%
+             mutate(target_num = scale(target_num, center = F)),
+           control = lmerControl(optCtrl = list(maxfun = 1e6))) # source: https://stat.ethz.ch/pipermail/r-sig-mixed-models/2014q2/022084.html
+
+summary(r1)
 ```
 
-```{r, fig.width = 4, fig.asp = 0.25}
-# ranef(r1) %>%
-#   data.frame() %>%
-#   ggplot(aes(x = condval)) +
-#   facet_grid(~term, scales = "free") +
-#   geom_histogram() +
-#   geom_vline(xintercept = 0, lty = 2, color = "blue")
+```{r, fig.width = 6, fig.asp = 0.9}
+ranef(r1) %>%
+  data.frame() %>%
+  mutate(param = recode_factor(term,
+                               "(Intercept)" = "overall at birth",
+                               "poly(target_num, 3, raw = T)1" = "overall linear",
+                               "poly(target_num, 3, raw = T)2" = "overall quadratic",
+                               "poly(target_num, 3, raw = T)3" = "overall cubic",
+                               "factorbod_gm" = "bodily at birth vs. GM",
+                               "factorbod_gm:poly(target_num, 3, raw = T)1" = 
+                                 "bodily linear vs. GM",
+                               "factorbod_gm:poly(target_num, 3, raw = T)2" = 
+                                 "bodily quadratic vs. GM",
+                               "factorbod_gm:poly(target_num, 3, raw = T)3" = 
+                                 "bodily cubic vs. GM",
+                               "factorcog_gm" = "cognitive at birth vs. GM",
+                               "factorcog_gm:poly(target_num, 3, raw = T)1" = 
+                                 "cognitive linear vs. GM",
+                               "factorcog_gm:poly(target_num, 3, raw = T)2" = 
+                                 "cognitive quadratic vs. GM",
+                               "factorcog_gm:poly(target_num, 3, raw = T)3" = 
+                                 "cognitive cubic vs. GM",
+                               "factorpos_gm" = "positive at birth vs. GM",
+                               "factorpos_gm:poly(target_num, 3, raw = T)1" = 
+                                 "positive linear vs. GM",
+                               "factorpos_gm:poly(target_num, 3, raw = T)2" = 
+                                 "positive quadratic vs. GM",
+                               "factorpos_gm:poly(target_num, 3, raw = T)3" = 
+                                 "positive cubic vs. GM"),
+         factor = case_when(grepl("overall", param) ~ "overall",
+                            # grepl("neg", param) ~ "negative emotions",
+                            grepl("bod", param) ~ "bodily sensations",
+                            grepl("cog", param) ~ "cognition & control",
+                            grepl("pos", param) ~ "positive/social emotions"),
+         factor = factor(factor,
+                         levels = c("overall",
+                                    #"negative emotions", 
+                                    "cognition & control",
+                                    "bodily sensations",  
+                                    "positive/social emotions"))) %>%
+  ggplot(aes(x = condval)) +
+  facet_wrap(~term, scales = "free") +
+  scale_x_continuous(breaks = seq(-100, 100, 20)) +
+  geom_histogram(bins = 15) +
+  geom_vline(xintercept = 0, lty = 2, color = "blue")
 ```
 
 
@@ -258,7 +296,10 @@ contrasts(d_cat_scored$factor)
 ```{r}
 reg_fun <- function(this_subid){
   r <- lm(score ~ factor * poly(target_num, 3),
-          d_cat_scored %>% filter(subid == this_subid))
+          d_cat_scored %>%
+            # mutate(target_num = target_num/12) %>%
+            # mutate(target_num = scale(target_num/12, center = F)) %>%
+            filter(subid == this_subid))
   
   coeffs <- summary(r)$coefficients %>%
     data.frame() %>%
@@ -336,11 +377,16 @@ indiv_coeffs %>%
                                     "bodily sensations",  
                                     "positive/social emotions"))) %>%
   ggplot(aes(x = b, fill = factor, alpha = signif)) +
-  facet_wrap(~ param, scales = "free") +
-  geom_histogram(fill = "black", alpha = 1) +
-  geom_histogram() +
-  # scale_fill_brewer(palette = "Set2", na.value = "gray")
-  scale_fill_manual(values = c("#a6d854", "#fc8d62", "#8da0cb", "#e78ac3"))
+  facet_wrap(~ param) + #, scales = "free") +
+  geom_histogram(bins = 30, fill = "black", alpha = 1) +
+  geom_histogram(bins = 30) +
+  geom_vline(xintercept = 0, lty = 2, color = "blue") +
+  # scale_x_continuous(breaks = seq(-1000, 1000, 25)) +
+  scale_fill_manual(values = c("#a6d854", "#fc8d62", "#8da0cb", "#e78ac3")) +
+  theme(legend.position = "top",
+        legend.box = "vertical") +
+  guides(fill = guide_legend(direction = "horizontal", nrow = 1),
+         alpha = guide_legend(direction = "horizontal", nrow = 1))
 ```
 
 ```{r, fig.width = 5, fig.asp = 1, include = F}
@@ -430,6 +476,7 @@ d_cat_scored %>%
   ggplot(aes(x = target_num, y = score)) + 
   facet_wrap(~ reorder(subid, order)) +
   geom_line(color = "#8da0cb", size = 1) +
+  ylim(0, 100) +
   labs(title = "Bodily sensations",
        # subtitle = "Ordered by coefficient of bodily sensations (vs. GM)")
        subtitle = "Ordered by perceived bodily sensations at birth")
@@ -456,6 +503,7 @@ d_cat_scored %>%
   ggplot(aes(x = target_num, y = score)) + 
   facet_wrap(~ reorder(subid, order)) +
   geom_line(color = "#fc8d62", size = 1) +
+  ylim(0, 100) +
   labs(title = "Cognition & control",
        # subtitle = "Ordered by coefficient of cognition & control (vs. GM)")
        subtitle = "Ordered by perceived cognition & control at birth")
@@ -482,6 +530,7 @@ d_cat_scored %>%
   ggplot(aes(x = target_num, y = score)) + 
   facet_wrap(~ reorder(subid, order)) +
   geom_line(color = "#e78ac3", size = 1) +
+  ylim(0, 100) +
   labs(title = "Positive/social emotions",
        # subtitle = "Ordered by coefficient of positive/social emotions (vs. GM)")
        subtitle = "Ordered by perceived positive/social emotions at birth")
@@ -508,6 +557,7 @@ d_cat_scored %>%
   ggplot(aes(x = target_num, y = score)) + 
   facet_wrap(~ reorder(subid, order)) +
   geom_line(color = "#66c2a5", size = 1) +
+  ylim(0, 100) +
   labs(title = "Negative emotions",
        # subtitle = "Ordered by coefficient of negative emotions (vs. GM)")
        subtitle = "Ordered by perceived negative emotions at birth")
