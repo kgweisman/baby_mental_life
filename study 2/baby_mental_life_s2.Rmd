@@ -590,3 +590,139 @@ ggplot(d_demo %>% filter(Parent == "Yes"),
 ```
 
 
+
+# Planning for S3 prereg
+
+```{r}
+d_temp <- d_all %>%
+  rownames_to_column("subid") %>%
+  mutate(target = gsub("^.*_target", "target", subid),
+         ResponseId = gsub("_target.*$", "", subid),
+         target_num = recode(target,
+                             "target00mo" = 0,
+                             "target0Xmo" = round(4/30, 3),
+                             "target01mo" = 1,
+                             "target02mo" = 2,
+                             "target04mo" = 4,
+                             "target06mo" = 6,
+                             "target09mo" = 9,
+                             "target12mo" = 12,
+                             "target18mo" = 18,
+                             "target24mo" = 24,
+                             "target36mo" = 36,
+                             "target48mo" = 48,
+                             "target60mo" = 60),
+         target_ord = recode_factor(target,
+                                    "target00mo" = "newborns",
+                                    "target0Xmo" = "4-day-olds",
+                                    "target01mo" = "1-month-olds",
+                                    "target02mo" = "2-month-olds",
+                                    "target04mo" = "4-month-olds",
+                                    "target06mo" = "6-month-olds",
+                                    "target09mo" = "9-month-olds",
+                                    "target12mo" = "12-month-olds",
+                                    "target18mo" = "18-month-olds",
+                                    "target24mo" = "2-year-olds",
+                                    "target36mo" = "3-year-olds",
+                                    "target48mo" = "4-year-olds",
+                                    "target60mo" = "5-year-olds")) %>%
+  select(-subid, -target) %>%
+  gather(capacity, response, -starts_with("target"), -ResponseId)
+```
+
+```{r}
+factors_temp <- efa_all_par$loadings[] %>%
+  data.frame() %>%
+  rownames_to_column("capacity") %>%
+  gather(factor, loading, -capacity) %>%
+  group_by(capacity) %>%
+  top_n(1, loading) %>%
+  ungroup() %>%
+  arrange(factor, desc(loading)) %>%
+  mutate(order = 1:nrow(.))
+
+factors_temp
+```
+
+```{r}
+capacities_s3 <- data.frame(capacity = c("controlling_their_emotions",
+                                         "reasoning_about_things",
+                                         "getting_hungry", 
+                                         "feeling_pain",
+                                         "feeling_happy", 
+                                         "learning_from_other_people",
+                                         "feeling_distressed", 
+                                         "feeling_helpless"),
+                            domain = c(rep("COG", 2),
+                                       rep("BOD", 2),
+                                       rep("POS", 2),
+                                       rep("NEG", 2))) %>%
+  mutate(domain = factor(domain))
+```
+
+```{r}
+d_temp_culled <- d_temp %>%
+  full_join(capacities_s3) %>%
+  full_join(factors_temp) %>%
+  filter(!is.na(domain)) %>%
+  distinct()
+
+# d_temp_culled
+```
+
+
+```{r}
+contrasts(d_temp_culled$domain) <- contr.sum(reten_all_par)
+
+r_temp <- lmer(response ~ target_num * domain
+               + (target_num + domain | ResponseId) 
+               + (target_num | capacity),
+               d_temp_culled %>%
+                 mutate(target_num = target_num/12))
+summary(r_temp, corr = F)
+```
+
+```{r}
+contrasts(d_temp_culled$domain) <- contr.sum(reten_all_par)
+
+r2_temp <- lmer(response ~ target_num * domain
+                + (target_num + domain | ResponseId)
+                + (1 | capacity),
+                d_temp_culled %>%
+                  mutate(target_num = target_num/12))
+summary(r2_temp, corr = F)
+```
+
+```{r}
+contrasts(d_temp_culled$domain) <- contr.sum(reten_all_par)
+
+r3_temp <- lmer(score ~ target_num * domain
+                + (target_num | ResponseId),
+                d_temp_culled %>%
+                  mutate(target_num = target_num/12) %>%
+                  group_by(domain, target_num, ResponseId) %>%
+                  summarise(score = mean(response, na.rm = T)) %>%
+                  ungroup() %>%
+                  distinct())
+summary(r3_temp, corr = F)
+```
+
+```{r}
+contrasts(d_temp_culled$domain) <- contr.sum(reten_all_par)
+
+r4_temp <- lmer(response ~ target_num
+                + (1 | ResponseId)
+                + (1 + target_num | capacity),
+                d_temp_culled %>%
+                  mutate(target_num = target_num/12) %>%
+                  filter(domain == "NEG"))
+summary(r4_temp, corr = F)
+
+r5_temp <- lmer(response ~ target_num
+                + (1 | ResponseId)
+                + (1 | capacity),
+                d_temp_culled %>%
+                  mutate(target_num = target_num/12) %>%
+                  filter(domain == "NEG"))
+summary(r5_temp, corr = F)
+```
