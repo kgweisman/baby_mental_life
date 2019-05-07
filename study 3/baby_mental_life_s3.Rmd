@@ -933,6 +933,25 @@ ggplot(d_dev_factor_rating %>%
        y = "Response (0 = plays no role, 6 = plays a very important role)")
 ```
 
+```{r, fig.width = 4, fig.asp = 0.8}
+ggplot(d_dev_factor_rating %>%
+         mutate(dev_factor = factor(
+           gsub("_", " ", dev_factor),
+           levels = gsub("_", " ", levels(d_dev_factor_rating$dev_factor)))),
+       aes(x = dev_factor, y = response)) +
+  geom_jitter(alpha = 0.01, height = 0.3, width = 0.3, color = "blue") +
+  geom_pointrange(data = . %>% group_by(dev_factor) %>%
+                    multi_boot_standard(col = "response", na.rm = T),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper),
+                  color = "black", fatten = 2) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Ratings of developmental factors (Version 3)",
+       subtitle = "Error bars are bootstrapped 95% CIs",
+       x = "Developmental factor", 
+       y = "Response (0 = plays no role, 6 = plays a very important role)")
+```
+
 # Table: Answers to (optional) free-response question about other developmental factors
 
 ```{r}
