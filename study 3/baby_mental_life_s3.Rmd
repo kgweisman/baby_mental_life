@@ -1,0 +1,1228 @@
+---
+title: "Baby Mental Life: Study 3"
+subtitle: "Preregistered analyses"
+date: 2018-05-07
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+---
+
+"Baby Mental Life: Study 3" was conducted on MTurk on 2019-04-24.
+
+Our planned sample was 300 participants; based on Study 2, we recruited 396 participants (on the idea that ~75% of 396 ~ 300 participants; note that for administrative purposes we need to recuit participants in batches that were divisible by 9). After filtering out participants who failed at least one of our attention checks, we ended up retaining 279 participants, but at this point we have not supplemented with additional recruiting. At each stage, we recruited women and men through separate studies, in hopes of acquiring a roughly equal split between genders.
+
+In the end, we ended up with a sample of 279 participants who passed our attention checks, 249 of whom came from unique GPS coordinates.
+
+**For this first pass, these data _exclude_ participants where there is another participant with an identical set of GPS coordinates as recorded by Qualtrics.**
+
+Each participant assessed children's mental capacities at 13 target ages between the ages of 0 and 5 years. For each target, they rated 8 mental capacities on a scale from 0 (not at all capable) to 100 (completely capable). In contrast to Study 2, participants completed all 13 ratings of a particular mental capacity on a single "trial" (rather than completing all 8 ratings of a particular target age on a single trial). In addition, participants answered questions about the "developmental factors" that might contribute to development in this domain.
+
+For more details about the study, see our preregistration [here](https://osf.io/xh8ce). 
+
+```{r}
+# load required libraries
+library(tidyverse)
+library(langcog) # source: https://github.com/langcog/langcog-package
+library(psych)
+library(lme4)
+library(kableExtra)
+
+# set theme for ggplots
+theme_set(theme_bw())
+
+chosen_rot <- "oblimin"
+```
+
+```{r}
+# run source code (extra home-made functions)
+source("./scripts/max_factors_efa.R")
+source("./scripts/plot_fun.R")
+source("./scripts/reten_fun.R")
+source("./scripts/data_prep.R")
+```
+
+
+# Study 1 EFA
+
+```{r}
+# load in EFA results from study 1
+efa_S1 <- readRDS("../study 1/s1_efa.rds")
+```
+
+```{r, fig.width = 4, fig.asp = 1.5}
+heatmap_fun(efa_S1) + 
+  labs(title = paste0("STUDY 1 Parallel Analysis (rotation: ", chosen_rot, ")"),
+       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+```
+
+# Plots: Capacity ratings as a function of target age and domain
+
+```{r, fig.width = 6, fig.asp = 0.7}
+ggplot(d_cap_rating %>%
+         arrange(ResponseId, domain, capacity, target_ord) %>%
+         mutate(domain = recode_factor(
+           domain,
+           "BOD" = "Bodily sensations",
+           "NEG" = "Negative emotions",
+           "POS" = "Social abilities & positive emotions",
+           "COG" = "Cognition & control",
+           .default = NA_character_),
+           capacity = gsub("_", " ", capacity)),
+       aes(x = target_num, y = response, group = ResponseId,
+           color = domain)) +
+  facet_wrap(~ domain ~ capacity, ncol = 4) +
+  geom_path(alpha = 0.1) +
+  geom_smooth(aes(group = capacity), 
+              method = "loess", 
+              color = "black") +
+  scale_x_continuous(breaks = as.numeric(levels(factor(d_cap_rating$target_num))),
+                     labels = levels(d_cap_rating$target_ord)) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Perceptions of development, by domain",
+       subtitle = "Black line = loess smoothing",
+       x = "Target age (numeric)",
+       y = "Response (0 = not at all capable, 100 = completely capable)")
+```
+
+```{r, fig.width = 6, fig.asp = 0.7}
+ggplot(d_cap_rating %>%
+         arrange(ResponseId, domain, capacity, target_ord) %>%
+         mutate(domain = recode_factor(
+           domain,
+           "BOD" = "Bodily sensations",
+           "NEG" = "Negative emotions",
+           "POS" = "Social abilities & positive emotions",
+           "COG" = "Cognition & control",
+           .default = NA_character_),
+           capacity = gsub("_", " ", capacity)),
+       aes(x = sqrt(target_num), y = response, group = ResponseId,
+           color = domain)) +
+  facet_wrap(~ domain ~ capacity, ncol = 4) +
+  geom_path(alpha = 0.1) +
+  geom_smooth(aes(group = capacity), 
+              method = "loess", 
+              color = "black") +
+  scale_x_continuous(breaks = sqrt(as.numeric(levels(factor(d_cap_rating$target_num)))),
+                     labels = levels(d_cap_rating$target_ord)) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Perceptions of development, by domain",
+       subtitle = "Black line = loess smoothing",
+       x = "Target age (numeric, square-root transformed)",
+       y = "Response (0 = not at all capable, 100 = completely capable)")
+```
+
+```{r, fig.width = 6, fig.asp = 0.7}
+ggplot(d_cap_rating %>%
+         arrange(ResponseId, domain, capacity, target_ord) %>%
+         mutate(domain = recode_factor(
+           domain,
+           "BOD" = "Bodily sensations",
+           "NEG" = "Negative emotions",
+           "POS" = "Social abilities & positive emotions",
+           "COG" = "Cognition & control",
+           .default = NA_character_),
+           capacity = gsub("_", " ", capacity)),
+       aes(x = target_ord, y = response, group = ResponseId,
+           color = domain)) +
+  facet_wrap(~ domain ~ capacity, ncol = 4) +
+  geom_path(alpha = 0.1) +
+  geom_smooth(aes(group = capacity), 
+              method = "loess", 
+              color = "black") +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Perceptions of development, by domain",
+       subtitle = "Black line = loess smoothing",
+       x = "Target age (ordinal)",
+       y = "Response (0 = not at all capable, 100 = completely capable)")
+```
+
+
+# Regression models, version 1: Capacity ratings as a function of target age and domain
+
+```{r}
+contrasts_domain_eff_noCOG <- cbind(BOD = c(1, -1, 0, 0),
+                                    NEG = c(0, -1, 1, 0),
+                                    POS = c(0, -1, 0, 1))
+contrasts_domain_eff_noPOS <- cbind(BOD = c(1, 0, 0, -1),
+                                    NEG = c(0, 0, 1, -1),
+                                    COG = c(0, 1, 0, -1))
+contrasts_domain_eff_noNEG <- cbind(BOD = c(1, 0, -1, 0),
+                                    POS = c(0, 0, -1, 1),
+                                    COG = c(0, 1, -1, 0))
+contrasts_domain_eff_noBOD <- cbind(POS = c(-1, 0, 0, 1),
+                                    NEG = c(-1, 0, 1, 0),
+                                    COG = c(-1, 1, 0, 0))
+```
+
+## Target age in months
+
+### Effect-coded (comparing all domains to the grand mean, except "bodily sensations")
+
+#### Linear effects only
+
+```{r}
+# r1_noBOD <- lmer(response ~ target_num * domain
+#                  + (target_num + domain | ResponseId) 
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12),
+#                  contrasts = list(domain = contrasts_domain_eff_noBOD))
+# saveRDS(r1_noBOD, "./models/r1_noBOD.RDS")
+
+r1_noBOD <- readRDS("./models/r1_noBOD.RDS")
+summary(r1_noBOD, corr = F)
+```
+
+#### Non-linear effects
+
+```{r}
+# r2_noBOD <- lmer(response ~ poly(target_num, 3) * domain
+#                  + (target_num + domain | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12),
+#                  contrasts = list(domain = contrasts_domain_eff_noBOD))
+# saveRDS(r2_noBOD, "./models/r2_noBOD.RDS")
+
+r2_noBOD <- readRDS("./models/r2_noBOD.RDS")
+summary(r2_noBOD, corr = F)
+```
+
+### Effect-coded (comparing all domains to the grand mean, except "negative emotions")
+
+#### Linear effects only
+
+```{r}
+# r1_noNEG <- lmer(response ~ target_num * domain
+#                  + (target_num + domain | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12),
+#                  contrasts = list(domain = contrasts_domain_eff_noNEG))
+# saveRDS(r1_noNEG, "./models/r1_noNEG.RDS")
+
+r1_noNEG <- readRDS("./models/r1_noNEG.RDS")
+summary(r1_noNEG, corr = F)
+```
+
+#### Non-linear effects
+
+```{r}
+# r2_noNEG <- lmer(response ~ poly(target_num, 3) * domain
+#                  + (target_num + domain | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12),
+#                  contrasts = list(domain = contrasts_domain_eff_noNEG))
+# saveRDS(r2_noNEG, "./models/r2_noNEG.RDS")
+
+r2_noNEG <- readRDS("./models/r2_noNEG.RDS")
+summary(r2_noNEG, corr = F)
+```
+
+### Effect-coded (comparing all domains to the grand mean, except "social abilities & positive emotions")
+
+#### Linear effects only
+
+```{r}
+# r1_noPOS <- lmer(response ~ target_num * domain
+#                  + (target_num + domain | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12),
+#                  contrasts = list(domain = contrasts_domain_eff_noPOS))
+# saveRDS(r1_noPOS, "./models/r1_noPOS.RDS")
+
+r1_noPOS <- readRDS("./models/r1_noPOS.RDS")
+summary(r1_noPOS, corr = F)
+```
+
+#### Non-linear effects
+
+```{r}
+# r2_noPOS <- lmer(response ~ poly(target_num, 3) * domain
+#                  + (target_num + domain | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12),
+#                  contrasts = list(domain = contrasts_domain_eff_noPOS))
+# saveRDS(r2_noPOS, "./models/r2_noPOS.RDS")
+
+r2_noPOS <- readRDS("./models/r2_noPOS.RDS")
+summary(r2_noPOS, corr = F)
+```
+
+### Effect-coded (comparing all domains to the grand mean, except "cognition & control")
+
+#### Linear effects only
+
+```{r}
+# r1_noCOG <- lmer(response ~ target_num * domain
+#                  + (target_num + domain | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12),
+#                  contrasts = list(domain = contrasts_domain_eff_noCOG))
+# saveRDS(r1_noCOG, "./models/r1_noCOG.RDS")
+
+r1_noCOG <- readRDS("./models/r1_noCOG.RDS")
+summary(r1_noCOG, corr = F)
+```
+
+#### Non-linear effects
+
+```{r}
+# r2_noCOG <- lmer(response ~ poly(target_num, 3) * domain
+#                  + (target_num + domain | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12),
+#                  contrasts = list(domain = contrasts_domain_eff_noCOG))
+# saveRDS(r2_noCOG, "./models/r2_noCOG.RDS")
+
+r2_noCOG <- readRDS("./models/r2_noCOG.RDS")
+summary(r2_noCOG, corr = F)
+```
+
+## Target age in months (square-root transformation)
+
+**NOTE: All of these models fail to meet our criterion of random effects being correlation < 0.90.** Because of this, I have not included in this print-out and I have not yet modeled non-linear effects after square-root transformation. The next step will be to try simpler random effects models (with fewer random slopes).
+
+```{r, include = F}
+# r3_noBOD <- lmer(response ~ sqrt(target_num) * domain
+#                  + (target_num + domain | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12),
+#                  contrasts = list(domain = contrasts_domain_eff_noBOD))
+# saveRDS(r3_noBOD, "./models/r3_noBOD.RDS")
+
+r3_noBOD <- readRDS("./models/r3_noBOD.RDS")
+summary(r3_noBOD, corr = F)
+```
+
+```{r, include = F}
+# # r4_noBOD <- lmer(response ~ poly(sqrt(target_num), 3) * domain
+# #                  + (target_num + domain | ResponseId)
+# #                  + (target_num | capacity),
+# #                  d_cap_rating %>%
+# #                    mutate(target_num = target_num/12),
+# #                  contrasts = list(domain = contrasts_domain_eff_noBOD))
+# # saveRDS(r4_noBOD, "./models/r4_noBOD.RDS")
+# 
+# r4_noBOD <- readRDS("./models/r4_noBOD.RDS")
+# summary(r4_noBOD, corr = F)
+```
+
+```{r, include = F}
+# r3_noNEG <- lmer(response ~ sqrt(target_num) * domain
+#                  + (target_num + domain | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12),
+#                  contrasts = list(domain = contrasts_domain_eff_noNEG))
+# saveRDS(r3_noNEG, "./models/r3_noNEG.RDS")
+
+r3_noNEG <- readRDS("./models/r3_noNEG.RDS")
+summary(r3_noNEG, corr = F)
+```
+
+```{r, include = F}
+# # r4_noNEG <- lmer(response ~ poly(sqrt(target_num), 3) * domain
+# #                  + (target_num + domain | ResponseId)
+# #                  + (target_num | capacity),
+# #                  d_cap_rating %>%
+# #                    mutate(target_num = target_num/12),
+# #                  contrasts = list(domain = contrasts_domain_eff_noNEG))
+# # saveRDS(r4_noNEG, "./models/r4_noNEG.RDS")
+# 
+# r4_noNEG <- readRDS("./models/r4_noNEG.RDS")
+# summary(r4_noNEG, corr = F)
+```
+
+```{r, include = F}
+# r3_noPOS <- lmer(response ~ sqrt(target_num) * domain
+#                  + (target_num + domain | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12),
+#                  contrasts = list(domain = contrasts_domain_eff_noPOS))
+# saveRDS(r3_noPOS, "./models/r3_noPOS.RDS")
+
+r3_noPOS <- readRDS("./models/r3_noPOS.RDS")
+summary(r3_noPOS, corr = F)
+```
+
+```{r, include = F}
+# # r4_noPOS <- lmer(response ~ poly(sqrt(target_num), 3) * domain
+# #                  + (target_num + domain | ResponseId)
+# #                  + (target_num | capacity),
+# #                  d_cap_rating %>%
+# #                    mutate(target_num = target_num/12),
+# #                  contrasts = list(domain = contrasts_domain_eff_noPOS))
+# # saveRDS(r4_noPOS, "./models/r4_noPOS.RDS")
+# 
+# r4_noPOS <- readRDS("./models/r4_noPOS.RDS")
+# summary(r4_noPOS, corr = F)
+```
+
+```{r, include = F}
+# r3_noCOG <- lmer(response ~ sqrt(target_num) * domain
+#                  + (target_num + domain | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12),
+#                  contrasts = list(domain = contrasts_domain_eff_noCOG))
+# saveRDS(r3_noCOG, "./models/r3_noCOG.RDS")
+
+r3_noCOG <- readRDS("./models/r3_noCOG.RDS")
+summary(r3_noCOG, corr = F)
+```
+
+```{r, include = F}
+# # r4_noCOG <- lmer(response ~ poly(sqrt(target_num), 3) * domain
+# #                  + (target_num + domain | ResponseId)
+# #                  + (target_num | capacity),
+# #                  d_cap_rating %>%
+# #                    mutate(target_num = target_num/12),
+# #                  contrasts = list(domain = contrasts_domain_eff_noCOG))
+# # saveRDS(r4_noCOG, "./models/r4_noCOG.RDS")
+# 
+# r4_noCOG <- readRDS("./models/r4_noCOG.RDS")
+# summary(r4_noCOG, corr = F)
+```
+
+
+# Regression models, version 2: Capacity ratings as a function of target age, for each domain separately
+
+**NOTE: All of the preregistered models fail to meet our criterion of random effects being correlation < 0.90.** Because of this, I instead used simpler random effects models (with fewer random slopes), as indicated in the preregistration.
+
+## Target age in months
+
+### Bodily sensations
+
+#### Linear effects only
+
+```{r, include = F}
+# r5_BOD <- lmer(response ~ target_num
+#                  + (1 | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "BOD"))
+# saveRDS(r5_BOD, "./models/r5_BOD.RDS")
+
+r5_BOD <- readRDS("./models/r5_BOD.RDS")
+summary(r5_BOD, corr = F)
+```
+
+```{r}
+# r5a_BOD <- lmer(response ~ target_num
+#                  + (1 | ResponseId)
+#                  + (1 | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "BOD"))
+# saveRDS(r5_BOD, "./models/r5a_BOD.RDS")
+
+r5a_BOD <- readRDS("./models/r5a_BOD.RDS")
+summary(r5a_BOD, corr = F)
+```
+
+#### Non-linear effects
+
+```{r, include = F}
+# r6_BOD <- lmer(response ~ poly(target_num, 3)
+#                  + (1 | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "BOD"))
+# saveRDS(r6_BOD, "./models/r6_BOD.RDS")
+
+r6_BOD <- readRDS("./models/r6_BOD.RDS")
+summary(r6_BOD, corr = F)
+```
+
+```{r}
+# r6a_BOD <- lmer(response ~ poly(target_num, 3)
+#                  + (1 | ResponseId)
+#                  + (1 | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "BOD"))
+# saveRDS(r6a_BOD, "./models/r6a_BOD.RDS")
+
+r6a_BOD <- readRDS("./models/r6a_BOD.RDS")
+summary(r6a_BOD, corr = F)
+```
+
+### Negative emotions
+
+#### Linear effects only
+
+```{r, include = F}
+# r5_NEG <- lmer(response ~ target_num
+#                  + (1 | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "NEG"))
+# saveRDS(r5_NEG, "./models/r5_NEG.RDS")
+
+r5_NEG <- readRDS("./models/r5_NEG.RDS")
+summary(r5_NEG, corr = F)
+```
+
+```{r}
+# r5a_NEG <- lmer(response ~ target_num
+#                  + (1 | ResponseId)
+#                  + (1 | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "NEG"))
+# saveRDS(r5_NEG, "./models/r5a_NEG.RDS")
+
+r5a_NEG <- readRDS("./models/r5a_NEG.RDS")
+summary(r5a_NEG, corr = F)
+```
+
+#### Non-linear effects
+
+```{r, include = F}
+# r6_NEG <- lmer(response ~ poly(target_num, 3)
+#                  + (1 | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "NEG"))
+# saveRDS(r6_NEG, "./models/r6_NEG.RDS")
+
+r6_NEG <- readRDS("./models/r6_NEG.RDS")
+summary(r6_NEG, corr = F)
+```
+
+```{r}
+# r6a_NEG <- lmer(response ~ poly(target_num, 3)
+#                  + (1 | ResponseId)
+#                  + (1 | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "NEG"))
+# saveRDS(r6a_NEG, "./models/r6a_NEG.RDS")
+
+r6a_NEG <- readRDS("./models/r6a_NEG.RDS")
+summary(r6a_NEG, corr = F)
+```
+
+### Social abilities & positive emotions
+
+#### Linear effects only
+
+```{r, include = F}
+# r5_POS <- lmer(response ~ target_num
+#                  + (1 | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "POS"))
+# saveRDS(r5_POS, "./models/r5_POS.RDS")
+
+r5_POS <- readRDS("./models/r5_POS.RDS")
+summary(r5_POS, corr = F)
+```
+
+```{r}
+# r5a_POS <- lmer(response ~ target_num
+#                  + (1 | ResponseId)
+#                  + (1 | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "POS"))
+# saveRDS(r5_POS, "./models/r5a_POS.RDS")
+
+r5a_POS <- readRDS("./models/r5a_POS.RDS")
+summary(r5a_POS, corr = F)
+```
+
+#### Non-linear effects
+
+```{r, include = F}
+# r6_POS <- lmer(response ~ poly(target_num, 3)
+#                  + (1 | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "POS"))
+# saveRDS(r6_POS, "./models/r6_POS.RDS")
+
+r6_POS <- readRDS("./models/r6_POS.RDS")
+summary(r6_POS, corr = F)
+```
+
+```{r}
+# r6a_POS <- lmer(response ~ poly(target_num, 3)
+#                  + (1 | ResponseId)
+#                  + (1 | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "POS"))
+# saveRDS(r6a_POS, "./models/r6a_POS.RDS")
+
+r6a_POS <- readRDS("./models/r6a_POS.RDS")
+summary(r6a_POS, corr = F)
+```
+
+### Negative emotions
+
+#### Linear effects only
+
+```{r, include = F}
+# r5_COG <- lmer(response ~ target_num
+#                  + (1 | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "COG"))
+# saveRDS(r5_COG, "./models/r5_COG.RDS")
+
+r5_COG <- readRDS("./models/r5_COG.RDS")
+summary(r5_COG, corr = F)
+```
+
+```{r}
+# r5a_COG <- lmer(response ~ target_num
+#                  + (1 | ResponseId)
+#                  + (1 | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "COG"))
+# saveRDS(r5_COG, "./models/r5a_COG.RDS")
+
+r5a_COG <- readRDS("./models/r5a_COG.RDS")
+summary(r5a_COG, corr = F)
+```
+
+#### Non-linear effects
+
+```{r, include = F}
+# r6_COG <- lmer(response ~ poly(target_num, 3)
+#                  + (1 | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "COG"))
+# saveRDS(r6_COG, "./models/r6_COG.RDS")
+
+r6_COG <- readRDS("./models/r6_COG.RDS")
+summary(r6_COG, corr = F)
+```
+
+```{r}
+# r6a_COG <- lmer(response ~ poly(target_num, 3)
+#                  + (1 | ResponseId)
+#                  + (1 | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "COG"))
+# saveRDS(r6a_COG, "./models/r6a_COG.RDS")
+
+r6a_COG <- readRDS("./models/r6a_COG.RDS")
+summary(r6a_COG, corr = F)
+```
+
+## Target age in months (square-root transformation)
+
+### Bodily sensations
+
+#### Linear effects only
+
+```{r, include = F}
+# r7_BOD <- lmer(response ~ sqrt(target_num)
+#                  + (1 | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "BOD"))
+# saveRDS(r7_BOD, "./models/r7_BOD.RDS")
+
+r7_BOD <- readRDS("./models/r7_BOD.RDS")
+summary(r7_BOD, corr = F)
+```
+
+```{r}
+# r7a_BOD <- lmer(response ~ sqrt(target_num)
+#                  + (1 | ResponseId)
+#                  + (1 | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "BOD"))
+# saveRDS(r7_BOD, "./models/r7a_BOD.RDS")
+
+r7a_BOD <- readRDS("./models/r7a_BOD.RDS")
+summary(r7a_BOD, corr = F)
+```
+
+#### Non-linear effects
+
+```{r, include = F}
+# r8_BOD <- lmer(response ~ poly(sqrt(target_num), 3)
+#                  + (1 | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "BOD"))
+# saveRDS(r8_BOD, "./models/r8_BOD.RDS")
+
+r8_BOD <- readRDS("./models/r8_BOD.RDS")
+summary(r8_BOD, corr = F)
+```
+
+```{r}
+# r8a_BOD <- lmer(response ~ poly(sqrt(target_num), 3)
+#                  + (1 | ResponseId)
+#                  + (1 | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "BOD"))
+# saveRDS(r8a_BOD, "./models/r8a_BOD.RDS")
+
+r8a_BOD <- readRDS("./models/r8a_BOD.RDS")
+summary(r8a_BOD, corr = F)
+```
+
+### Negative emotions
+
+#### Linear effects only
+
+```{r, include = F}
+# r7_NEG <- lmer(response ~ sqrt(target_num)
+#                  + (1 | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "NEG"))
+# saveRDS(r7_NEG, "./models/r7_NEG.RDS")
+
+r7_NEG <- readRDS("./models/r7_NEG.RDS")
+summary(r7_NEG, corr = F)
+```
+
+```{r}
+# r7a_NEG <- lmer(response ~ sqrt(target_num)
+#                  + (1 | ResponseId)
+#                  + (1 | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "NEG"))
+# saveRDS(r7_NEG, "./models/r7a_NEG.RDS")
+
+r7a_NEG <- readRDS("./models/r7a_NEG.RDS")
+summary(r7a_NEG, corr = F)
+```
+
+#### Non-linear effects
+
+```{r, include = F}
+# r8_NEG <- lmer(response ~ poly(sqrt(target_num), 3)
+#                  + (1 | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "NEG"))
+# saveRDS(r8_NEG, "./models/r8_NEG.RDS")
+
+r8_NEG <- readRDS("./models/r8_NEG.RDS")
+summary(r8_NEG, corr = F)
+```
+
+```{r}
+# r8a_NEG <- lmer(response ~ poly(sqrt(target_num), 3)
+#                  + (1 | ResponseId)
+#                  + (1 | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "NEG"))
+# saveRDS(r8a_NEG, "./models/r8a_NEG.RDS")
+
+r8a_NEG <- readRDS("./models/r8a_NEG.RDS")
+summary(r8a_NEG, corr = F)
+```
+
+### Social abilities & positive emotions
+
+#### Linear effects only
+
+```{r, include = F}
+# r7_POS <- lmer(response ~ sqrt(target_num)
+#                  + (1 | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "POS"))
+# saveRDS(r7_POS, "./models/r7_POS.RDS")
+
+r7_POS <- readRDS("./models/r7_POS.RDS")
+summary(r7_POS, corr = F)
+```
+
+```{r}
+# r7a_POS <- lmer(response ~ sqrt(target_num)
+#                  + (1 | ResponseId)
+#                  + (1 | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "POS"))
+# saveRDS(r7_POS, "./models/r7a_POS.RDS")
+
+r7a_POS <- readRDS("./models/r7a_POS.RDS")
+summary(r7a_POS, corr = F)
+```
+
+#### Non-linear effects
+
+```{r, include = F}
+# r8_POS <- lmer(response ~ poly(sqrt(target_num), 3)
+#                  + (1 | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "POS"))
+# saveRDS(r8_POS, "./models/r8_POS.RDS")
+
+r8_POS <- readRDS("./models/r8_POS.RDS")
+summary(r8_POS, corr = F)
+```
+
+```{r}
+# r8a_POS <- lmer(response ~ poly(sqrt(target_num), 3)
+#                  + (1 | ResponseId)
+#                  + (1 | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "POS"))
+# saveRDS(r8a_POS, "./models/r8a_POS.RDS")
+
+r8a_POS <- readRDS("./models/r8a_POS.RDS")
+summary(r8a_POS, corr = F)
+```
+
+### Cognition & control
+
+#### Linear effects only
+
+```{r, include = F}
+# r7_COG <- lmer(response ~ sqrt(target_num)
+#                  + (1 | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "COG"))
+# saveRDS(r7_COG, "./models/r7_COG.RDS")
+
+r7_COG <- readRDS("./models/r7_COG.RDS")
+summary(r7_COG, corr = F)
+```
+
+```{r}
+# r7a_COG <- lmer(response ~ sqrt(target_num)
+#                  + (1 | ResponseId)
+#                  + (1 | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "COG"))
+# saveRDS(r7_COG, "./models/r7a_COG.RDS")
+
+r7a_COG <- readRDS("./models/r7a_COG.RDS")
+summary(r7a_COG, corr = F)
+```
+
+#### Non-linear effects
+
+```{r, include = F}
+# r8_COG <- lmer(response ~ poly(sqrt(target_num), 3)
+#                  + (1 | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "COG"))
+# saveRDS(r8_COG, "./models/r8_COG.RDS")
+
+r8_COG <- readRDS("./models/r8_COG.RDS")
+summary(r8_COG, corr = F)
+```
+
+```{r}
+# r8a_COG <- lmer(response ~ poly(sqrt(target_num), 3)
+#                  + (1 | ResponseId)
+#                  + (1 | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12) %>%
+#                    filter(domain == "COG"))
+# saveRDS(r8a_COG, "./models/r8a_COG.RDS")
+
+r8a_COG <- readRDS("./models/r8a_COG.RDS")
+summary(r8a_COG, corr = F)
+```
+
+
+# Plots: Ratings for developmental factors, by domain and capacity
+
+```{r, fig.width = 6, fig.asp = 0.7}
+ggplot(d_dev_factor_rating %>%
+         mutate(domain = recode_factor(
+           domain,
+           "BOD" = "Bodily sensations",
+           "NEG" = "Negative emotions",
+           "POS" = "Social abilities & positive emotions",
+           "COG" = "Cognition & control",
+           .default = NA_character_)) %>%
+         mutate_at(vars(capacity, dev_factor),
+                   funs(gsub("_", " ", .))) %>%
+         mutate(dev_factor = factor(
+           dev_factor,
+           levels = gsub("_", " ", levels(d_dev_factor_rating$dev_factor)))),
+       aes(x = dev_factor, y = response, color = domain)) +
+  facet_wrap(~ domain ~ capacity, ncol = 4) +
+  geom_jitter(alpha = 0.025, height = 0.2, width = 0.2) +
+  geom_pointrange(data = . %>% group_by(domain, capacity, dev_factor) %>%
+                    multi_boot_standard(col = "response", na.rm = T),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper),
+                  color = "black", fatten = 4) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Ratings of developmental factors (Version 1)",
+       subtitle = "Error bars are bootstrapped 95% CIs",
+       x = "Developmental factor", 
+       y = "Response (0 = plays no role, 6 = plays a very important role)")
+```
+
+```{r, fig.width = 6, fig.asp = 0.7}
+ggplot(d_dev_factor_rating %>%
+         mutate(domain = recode_factor(
+           domain,
+           "BOD" = "Bodily sensations",
+           "NEG" = "Negative emotions",
+           "POS" = "Social abilities & positive emotions",
+           "COG" = "Cognition & control",
+           .default = NA_character_)) %>%
+         mutate_at(vars(capacity, dev_factor),
+                   funs(gsub("_", " ", .))) %>%
+         mutate(dev_factor = factor(
+           dev_factor,
+           levels = gsub("_", " ", levels(d_dev_factor_rating$dev_factor)))),
+       aes(x = reorder(capacity, as.numeric(domain)), 
+           y = response, color = domain)) +
+  facet_wrap(~ dev_factor, ncol = 5) +
+  geom_jitter(alpha = 0.025, height = 0.2, width = 0.2) +
+  geom_pointrange(data = . %>% group_by(domain, capacity, dev_factor) %>%
+                    multi_boot_standard(col = "response", na.rm = T),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper),
+                  color = "black", fatten = 4) +
+  theme(legend.position = "top",
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 3))) +
+  labs(title = "Ratings of developmental factors (Version 2)",
+       subtitle = "Error bars are bootstrapped 95% CIs",
+       color = "Domain",
+       x = "Capacity (by domain)", 
+       y = "Response (0 = plays no role, 6 = plays a very important role)")
+```
+
+# Table: Answers to (optional) free-response question about other developmental factors
+
+```{r}
+d_dev_factor_other %>%
+  mutate(domain = recode_factor(
+    domain,
+    "BOD" = "Bodily sensations",
+    "NEG" = "Negative emotions",
+    "POS" = "Social abilities & positive emotions",
+    "COG" = "Cognition & control",
+    .default = NA_character_),
+    capacity = gsub("_", " ", capacity)) %>%
+  distinct(domain, capacity, response) %>%
+  arrange(domain, capacity, response) %>%
+  kable(caption = "Free responses to optional question about other developmental factors that might play a role (excluding answers like 'N/A,' 'no,' 'not that I can think of', etc.)") %>%
+  kable_styling() %>%
+  collapse_rows(1:2)
+```
+
+# Plots: Most important developmental factor, by domain and capacity
+
+```{r, fig.width = 6, fig.asp = 0.7}
+ggplot(d_dev_factor_most_important_choice %>%
+         mutate(domain = recode_factor(
+           domain,
+           "BOD" = "Bodily sensations",
+           "NEG" = "Negative emotions",
+           "POS" = "Social abilities & positive emotions",
+           "COG" = "Cognition & control",
+           .default = NA_character_)) %>%
+         mutate(dev_factor = case_when(
+           grepl("Other", response) ~ "other",
+           grepl("teach", response) ~ "people teach",
+           grepl("experiments", response) ~ "experiments",
+           grepl("womb", response) ~ "womb experiences",
+           grepl("interacts", response) ~ "interacts people",
+           grepl("preprogrammed", response) ~ "preprogrammed",
+           grepl("objects", response) ~ "observes objects",
+           grepl("observes the people", response) ~ "observes people",
+           grepl("body grows", response) ~ "body grows",
+           grepl("brain changes", response) ~ "brain changes",
+           grepl("senses improve", response) ~ "senses improve"),
+           dev_factor = factor(
+             dev_factor,
+             levels = c(gsub("_", " ", 
+                             levels(d_dev_factor_rating$dev_factor)),
+                        "other"))) %>%
+         mutate_at(vars(capacity, response),
+                   funs(gsub("_", " ", .))),
+       aes(x = dev_factor, fill = domain)) +
+  facet_wrap(~ domain ~ capacity, ncol = 4) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  geom_bar() +
+  labs(title = "Choice of most important developmental factor (Version 1)",
+       x = "Developmental factor", 
+       y = "Number of participants")
+```
+
+```{r, fig.width = 6, fig.asp = 0.7}
+temp_other <- d_dev_factor_most_important_choice %>% 
+  filter(grepl("Other", response)) %>% 
+  count(domain, capacity)
+
+ggplot(d_dev_factor_most_important_choice %>%
+         mutate(domain = recode_factor(
+           domain,
+           "BOD" = "Bodily sensations",
+           "NEG" = "Negative emotions",
+           "POS" = "Social abilities & positive emotions",
+           "COG" = "Cognition & control",
+           .default = NA_character_)) %>%
+         mutate(dev_factor = case_when(
+           grepl("Other", response) ~ "other",
+           grepl("teach", response) ~ "people teach",
+           grepl("experiments", response) ~ "experiments",
+           grepl("womb", response) ~ "womb experiences",
+           grepl("interacts", response) ~ "interacts people",
+           grepl("preprogrammed", response) ~ "preprogrammed",
+           grepl("objects", response) ~ "observes objects",
+           grepl("observes the people", response) ~ "observes people",
+           grepl("body grows", response) ~ "body grows",
+           grepl("brain changes", response) ~ "brain changes",
+           grepl("senses improve", response) ~ "senses improve"),
+           dev_factor = factor(
+             dev_factor,
+             levels = c(gsub("_", " ", 
+                             levels(d_dev_factor_rating$dev_factor)),
+                        "other"))) %>%
+         mutate_at(vars(capacity, response),
+                   funs(gsub("_", " ", .))) %>%
+         filter(dev_factor != "other"),
+       aes(x = reorder(capacity, as.numeric(domain)), fill = domain)) +
+  facet_wrap(~ dev_factor, ncol = 5) +
+  theme(legend.position = "top",
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  geom_bar() +
+  labs(title = "Choice of most important developmental factor (Version 2)",
+       subtitle = paste0("Excluding answers of 'other' (n < ", 
+                         max(temp_other$n) + 1, ") for any capacity"),
+       color = "Domain",
+       x = "Capacity (by domain)", 
+       y = "Number of participants")
+```
+
+```{r}
+d_dev_factor_most_important_free %>%
+  mutate(domain = recode_factor(
+    domain,
+    "BOD" = "Bodily sensations",
+    "NEG" = "Negative emotions",
+    "POS" = "Social abilities & positive emotions",
+    "COG" = "Cognition & control",
+    .default = NA_character_),
+    capacity = gsub("_", " ", capacity)) %>%
+  distinct(domain, capacity, response) %>%
+  arrange(domain, capacity, response) %>%
+  kable(caption = "Free responses when 'other' was selected as most important developmental factor") %>%
+  kable_styling() %>%
+  collapse_rows(1:2)
+```
+
+
+# Demographics
+
+```{r}
+ggplot(d_demo, aes(x = Duration/60)) + 
+  geom_histogram(binwidth = 2) +
+  geom_vline(xintercept = median(d_demo$Duration/60), color = "blue", lty = 2) +
+  scale_x_continuous(breaks = seq(0, 10000, 4)) +
+  labs(title = "Duration of study (according to Qualtrics)",
+       subtitle = "Blue dotted line marks median",
+       x = "Duration (in minutes)",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = Age)) + 
+  geom_histogram(binwidth = 2) +
+  geom_vline(xintercept = median(d_demo$Age), color = "blue", lty = 2) +
+  scale_x_continuous(breaks = seq(0, 10000, 4)) +
+  labs(title = "Particpiant age (self-reported)",
+       subtitle = "Blue dotted line marks median",
+       x = "Age (in years)",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = GenderSex)) + 
+  geom_bar() +
+  labs(title = "Particpiant gender/sex (self-reported)",
+       x = "Gender/sex",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = gsub('(.{1,30})(\\s|$)', '\\1\n', RaceEthnicity_collapse))) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Particpiant race/ethnicity (self-reported)",
+       x = "Race/ethnicity",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = FirstLang)) + 
+  geom_bar() +
+  labs(title = "Particpiant first language (self-reported)",
+       x = "Language",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = factor(Education,
+                              levels = levels(d$Education),
+                              labels = gsub('(.{1,30})(\\s|$)', '\\1\n', 
+                                            levels(d$Education))))) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Particpiant educational attainment (self-reported)",
+       x = "Highest level of education completed",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = Income)) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Particpiant household income (self-reported)",
+       x = "Annual household income",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = HouseholdSize)) + 
+  geom_histogram(binwidth = 1) +
+  geom_vline(xintercept = median(d_demo$HouseholdSize), color = "blue", lty = 2) +
+  scale_x_continuous(breaks = seq(0, 10000, 1)) +
+  labs(title = "Particpiant household size (self-reported)",
+       subtitle = "Blue dotted line marks median",
+       x = "Number of people in household (adults and children)",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = MaritalStatus)) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Particpiant marital status (self-reported)",
+       x = "Marital status",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo, aes(x = Parent)) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Particpiant parent status (self-reported)",
+       subtitle = "'NA' indicates response of 'Prefer not to say'",
+       x = "Parent status",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo %>% filter(Parent == "Yes"), aes(x = ChildrenNumber)) + 
+  geom_histogram(binwidth = 1) +
+  geom_vline(xintercept = median(d_demo[d_demo$Parent == "Yes",]$ChildrenNumber, na.rm = T), 
+             color = "blue", lty = 2) +
+  scale_x_continuous(breaks = seq(0, 10000, 1)) +
+  labs(title = "Number of children among parents (self-reported)",
+       subtitle = "Blue dotted line marks median",
+       x = "Number of children (among parents)",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo %>% filter(Parent == "Yes"), 
+       aes(x = factor(ChildrenYoungestAge_collapse,
+                      levels = levels(d_demo$ChildrenYoungestAge_collapse),
+                      labels = gsub('(.{1,30})(\\s|$)', '\\1\n', 
+                                    levels(d_demo$ChildrenYoungestAge_collapse))))) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Age of youngest child among parents (self-reported)",
+       x = "Age of child",
+       y = "Number of participants")
+```
+
+```{r}
+ggplot(d_demo %>% filter(Parent == "Yes"), 
+       aes(x = factor(ChildrenOldestAge_collapse,
+                      levels = levels(d_demo$ChildrenOldestAge_collapse),
+                      labels = gsub('(.{1,30})(\\s|$)', '\\1\n', 
+                                    levels(d_demo$ChildrenOldestAge_collapse))))) + 
+  geom_bar() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Age of oldest child among parents (self-reported)",
+       x = "Age of child",
+       y = "Number of participants")
+```
+
+```{r, include = F}
+d_demo %>%
+  distinct(Comments) %>%
+  mutate(Comments = gsub(" $", "", Comments),
+         Comments = gsub("\\!$", "", Comments),
+         Comments = gsub("\\.$", "", Comments)) %>%
+  filter(tolower(Comments) != "n/a", 
+         tolower(Comments) != "na",
+         tolower(Comments) != "no", 
+         tolower(Comments) != "no comment",
+         tolower(Comments) != "no comments", 
+         tolower(Comments) != "no additional comments", 
+         tolower(Comments) != "nil", 
+         tolower(Comments) != "no other comments",
+         tolower(Comments) != "no further remarks", 
+         tolower(Comments) != "no thank you", 
+         tolower(Comments) != "no there is not. thanks", 
+         tolower(Comments) != "none",
+         tolower(Comments) != "none. thank you", 
+         tolower(Comments) != "none, thank you", 
+         tolower(Comments) != "nope, thank you for letting me take this",
+         tolower(Comments) != "nothing at the moment",
+         tolower(Comments) != "thank you",
+         tolower(Comments) != "thank you for the opportunity to take part in this study",
+         tolower(Comments) != "thank you for this opportunity",
+         tolower(Comments) != "thanks",
+         tolower(Comments) != "thanks for the opportunity and good luck with your research",
+         tolower(Comments) != "thanks for the opportunity") %>%
+  arrange(Comments) %>%
+  kable(caption = "Free responses to optional 'comments' field (excluding answers like 'N/A,' 'no,' 'not that I can think of', 'thank you', etc., when they were easy to exclude)") %>%
+  kable_styling()
+```
