@@ -8,18 +8,6 @@ output:
     toc_float: true
 ---
 
-"Baby Mental Life: Study 3" was conducted on MTurk on 2019-04-24.
-
-Our planned sample was 300 participants; based on Study 2, we recruited 396 participants (on the idea that ~75% of 396 ~ 300 participants; note that for administrative purposes we need to recuit participants in batches that were divisible by 9). After filtering out participants who failed at least one of our attention checks, we ended up retaining 279 participants, but at this point we have not supplemented with additional recruiting. At each stage, we recruited women and men through separate studies, in hopes of acquiring a roughly equal split between genders.
-
-In the end, we ended up with a sample of 279 participants who passed our attention checks, 249 of whom came from unique GPS coordinates.
-
-**For this first pass, these data _exclude_ participants where there is another participant with an identical set of GPS coordinates as recorded by Qualtrics.**
-
-Each participant assessed children's mental capacities at 13 target ages between the ages of 0 and 5 years. For each target, they rated 8 mental capacities on a scale from 0 (not at all capable) to 100 (completely capable). In contrast to Study 2, participants completed all 13 ratings of a particular mental capacity on a single "trial" (rather than completing all 8 ratings of a particular target age on a single trial). In addition, participants answered questions about the "developmental factors" that might contribute to development in this domain.
-
-For more details about the study, see our preregistration [here](https://osf.io/xh8ce). 
-
 ```{r}
 # load required libraries
 library(tidyverse)
@@ -42,6 +30,17 @@ source("./scripts/reten_fun.R")
 source("./scripts/data_prep.R")
 ```
 
+"Baby Mental Life: Study 3" was conducted on MTurk on 2019-04-24.
+
+Our planned sample was 300 participants; based on Study 2, we initially recruited 352 participants. After filtering out participants who failed at least one of our attention checks, we ended up retaining `r nrow(d)` participants (retention rate: `r round(nrow(d)/352, 3)*100`%), but at this point we have _not_ supplemented with additional recruiting. At each stage, we recruited women and men through separate studies, in hopes of acquiring a roughly equal split between genders.
+
+In the end, we ended up with a sample of `r nrow(d)` participants who passed our attention checks, `r nrow(d_nodup)` of whom came from unique GPS coordinates (`r round(nrow(d_nodup)/nrow(d), 3)*100`%).
+
+**For this first pass, these data _include_ participants where there is another participant with an identical set of GPS coordinates as recorded by Qualtrics.**
+
+Each participant assessed children's mental capacities at 13 target ages between the ages of 0 and 5 years. For each target, they rated 8 mental capacities on a scale from 0 (not at all capable) to 100 (completely capable). In contrast to Study 2, participants completed all 13 ratings of a particular mental capacity on a single "trial" (rather than completing all 8 ratings of a particular target age on a single trial). In addition, participants answered questions about the "developmental factors" that might contribute to development in this domain.
+
+For more details about the study, see our preregistration [here](https://osf.io/xh8ce). 
 
 # Study 1 EFA
 
@@ -427,7 +426,7 @@ summary(r5_BOD, corr = F)
 #                  d_cap_rating %>%
 #                    mutate(target_num = target_num/12) %>%
 #                    filter(domain == "BOD"))
-# saveRDS(r5_BOD, "./models/r5a_BOD.RDS")
+# saveRDS(r5a_BOD, "./models/r5a_BOD.RDS")
 
 r5a_BOD <- readRDS("./models/r5a_BOD.RDS")
 summary(r5a_BOD, corr = F)
@@ -485,7 +484,7 @@ summary(r5_NEG, corr = F)
 #                  d_cap_rating %>%
 #                    mutate(target_num = target_num/12) %>%
 #                    filter(domain == "NEG"))
-# saveRDS(r5_NEG, "./models/r5a_NEG.RDS")
+# saveRDS(r5a_NEG, "./models/r5a_NEG.RDS")
 
 r5a_NEG <- readRDS("./models/r5a_NEG.RDS")
 summary(r5a_NEG, corr = F)
@@ -543,7 +542,7 @@ summary(r5_POS, corr = F)
 #                  d_cap_rating %>%
 #                    mutate(target_num = target_num/12) %>%
 #                    filter(domain == "POS"))
-# saveRDS(r5_POS, "./models/r5a_POS.RDS")
+# saveRDS(r5a_POS, "./models/r5a_POS.RDS")
 
 r5a_POS <- readRDS("./models/r5a_POS.RDS")
 summary(r5a_POS, corr = F)
@@ -601,7 +600,7 @@ summary(r5_COG, corr = F)
 #                  d_cap_rating %>%
 #                    mutate(target_num = target_num/12) %>%
 #                    filter(domain == "COG"))
-# saveRDS(r5_COG, "./models/r5a_COG.RDS")
+# saveRDS(r5a_COG, "./models/r5a_COG.RDS")
 
 r5a_COG <- readRDS("./models/r5a_COG.RDS")
 summary(r5a_COG, corr = F)
@@ -661,7 +660,7 @@ summary(r7_BOD, corr = F)
 #                  d_cap_rating %>%
 #                    mutate(target_num = target_num/12) %>%
 #                    filter(domain == "BOD"))
-# saveRDS(r7_BOD, "./models/r7a_BOD.RDS")
+# saveRDS(r7a_BOD, "./models/r7a_BOD.RDS")
 
 r7a_BOD <- readRDS("./models/r7a_BOD.RDS")
 summary(r7a_BOD, corr = F)
@@ -719,7 +718,7 @@ summary(r7_NEG, corr = F)
 #                  d_cap_rating %>%
 #                    mutate(target_num = target_num/12) %>%
 #                    filter(domain == "NEG"))
-# saveRDS(r7_NEG, "./models/r7a_NEG.RDS")
+# saveRDS(r7a_NEG, "./models/r7a_NEG.RDS")
 
 r7a_NEG <- readRDS("./models/r7a_NEG.RDS")
 summary(r7a_NEG, corr = F)
@@ -777,7 +776,7 @@ summary(r7_POS, corr = F)
 #                  d_cap_rating %>%
 #                    mutate(target_num = target_num/12) %>%
 #                    filter(domain == "POS"))
-# saveRDS(r7_POS, "./models/r7a_POS.RDS")
+# saveRDS(r7a_POS, "./models/r7a_POS.RDS")
 
 r7a_POS <- readRDS("./models/r7a_POS.RDS")
 summary(r7a_POS, corr = F)
@@ -835,7 +834,7 @@ summary(r7_COG, corr = F)
 #                  d_cap_rating %>%
 #                    mutate(target_num = target_num/12) %>%
 #                    filter(domain == "COG"))
-# saveRDS(r7_COG, "./models/r7a_COG.RDS")
+# saveRDS(r7a_COG, "./models/r7a_COG.RDS")
 
 r7a_COG <- readRDS("./models/r7a_COG.RDS")
 summary(r7a_COG, corr = F)
@@ -952,6 +951,163 @@ ggplot(d_dev_factor_rating %>%
        y = "Response (0 = plays no role, 6 = plays a very important role)")
 ```
 
+
+# Exploration: EFA/clustering of developmental factors
+
+It could be nice to reduce the number of "devleopmental factors" from 10 down to something more manageable for analysis. Here I explore EFA and hierarchical clustering as dimension reduction methods, and re-plot with these results in mind.
+
+```{r}
+temp <- d_dev_factor_rating %>%
+  unite(key, ResponseId, domain, capacity) %>%
+  spread(dev_factor, response) %>%
+  column_to_rownames("key")
+```
+
+```{r}
+reten_fun(temp, "varimax")
+# fa.parallel(temp)
+# VSS(temp)
+```
+
+```{r}
+temp_efa <- fa(temp,
+               nfactors = reten_fun(temp, "varimax"),
+               rotate = "varimax")
+```
+
+```{r, fig.width = 2, fig.asp = 0.8}
+heatmap_fun(temp_efa) + 
+  guides(fill = guide_colorbar(barheight = 8, barwidth = 0.5))
+```
+
+```{r, fig.width = 3, fig.asp = 0.6}
+library(ggdendro)
+library(dendextend)
+
+temp_hclust <- temp %>%
+  t() %>%
+  dist() %>%
+  hclust()
+
+temp_hclust_order <- data.frame(order = as.numeric(temp_hclust$order), 
+                                dev_factor = as.character(temp_hclust$labels))
+
+temp_hclust %>%
+  ggdendrogram(rotate = F) +
+  theme_minimal() +
+  theme(#axis.title = element_blank(),
+        # axis.text.y = element_blank(), 
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank()) +
+  labs(title = "Hierarchical agglomerative clustering", 
+       subtitle = "Complete linkage (default for stats::hclust() function)",
+       x = "Developmental factor", y = "Height")
+  # as.dendrogram() %>%
+  # set("labels_col", k = 2) %>%
+  # plot(horiz = T, xlim = c(-100, 200))
+```
+
+```{r}
+temp2 <- d_dev_factor_rating %>%
+  mutate(dev_factor_cluster = case_when(
+    dev_factor %in% c("experiments", "people_teach", "brain_changes", 
+                      "observes_objects", "observes_people", 
+                      "interacts_people") ~ "external",
+    dev_factor %in% c("preprogrammed", "womb_experiences", "body_grows", 
+                      "senses_improve") ~ "internal",
+    TRUE ~ NA_character_)) %>%
+  mutate(dev_factor_cluster = factor(dev_factor_cluster),
+         response_cent = response - 3) %>%
+  left_join(temp_hclust_order)
+
+contrasts_cluster_eff <- cbind(EXT = c(1, -1))
+```
+
+```{r, fig.width = 6, fig.asp = 0.7}
+ggplot(temp2 %>%
+         mutate(domain = recode_factor(
+           domain,
+           "BOD" = "Bodily sensations",
+           "NEG" = "Negative emotions",
+           "POS" = "Social abilities & positive emotions",
+           "COG" = "Cognition & control",
+           .default = NA_character_)) %>%
+         mutate_at(vars(capacity, dev_factor),
+                   funs(gsub("_", " ", .))),
+       aes(x = reorder(dev_factor, as.numeric(dev_factor_cluster)), 
+           y = response, color = domain, shape = dev_factor_cluster)) +
+  facet_wrap(~ domain ~ capacity, ncol = 4) +
+  geom_jitter(alpha = 0.025, height = 0.2, width = 0.2, show.legend = F) +
+  geom_pointrange(data = . %>% group_by(domain, capacity, 
+                                        dev_factor_cluster, dev_factor) %>%
+                    multi_boot_standard(col = "response", na.rm = T),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper),
+                  color = "black", fatten = 4) +
+  theme(legend.position = "top",
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(title = "Ratings of developmental factors (Version 1)",
+       subtitle = "Error bars are bootstrapped 95% CIs",
+       shape = "Type of developmental factor (per EFA/clustering)",
+       x = "Developmental factor", 
+       y = "Response (0 = plays no role, 6 = plays a very important role)")
+```
+
+```{r, fig.width = 6, fig.asp = 0.7}
+ggplot(temp2 %>%
+         mutate(domain = recode_factor(
+           domain,
+           "BOD" = "Bodily sensations",
+           "NEG" = "Negative emotions",
+           "POS" = "Social abilities & positive emotions",
+           "COG" = "Cognition & control",
+           .default = NA_character_)) %>%
+         mutate_at(vars(capacity),
+                   funs(gsub("_", " ", .))),
+       aes(x = reorder(capacity, as.numeric(domain)), 
+           y = response, color = domain)) +
+  facet_wrap(dev_factor_cluster ~ dev_factor, ncol = 6) +
+  geom_jitter(alpha = 0.025, height = 0.2, width = 0.2) +
+  geom_pointrange(data = . %>% group_by(domain, capacity, 
+                                        dev_factor_cluster, dev_factor) %>%
+                    multi_boot_standard(col = "response", na.rm = T),
+                  aes(y = mean, ymin = ci_lower, ymax = ci_upper),
+                  color = "black", fatten = 4) +
+  theme(legend.position = "top",
+        axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  guides(color = guide_legend(override.aes = list(alpha = 1, size = 3))) +
+  labs(title = "Ratings of developmental factors (Version 3)",
+       subtitle = "Error bars are bootstrapped 95% CIs",
+       color = "Domain",
+       x = "Capacity (by domain)", 
+       y = "Response (0 = plays no role, 6 = plays a very important role)")
+```
+
+
+```{r}
+r_temp <- lmer(response ~ domain * dev_factor_cluster + 
+                 # (domain + dev_factor_cluster | ResponseId) +
+                 # including both random intercepts yields corr > 0.9
+                 (1 + dev_factor_cluster | ResponseId) +
+                 (1 | capacity) + (1 | dev_factor),
+               temp2,
+               contrasts = list(domain = contrasts_domain_eff_noBOD,
+                                dev_factor_cluster = contrasts_cluster_eff))
+```
+
+```{r}
+summary(r_temp)
+```
+
+(Note that domain was effect-coded and leaves out the _bodily sensations_ domain here, but we could re-code it in all the different ways to get the contrast between _bodily sensations_ and the grand mean as desired.)
+
+I see three take-aways from these regression results, all of which I think I can see reflected in the plots above:
+
+1. Participants perceived the domain of _social connection and positive emotions_ to be particularly dramatically shaped by the set of developmental factors we included in this study (relative to the grand mean collapsing across domains).
+2. On the whole, participants endorsed "external" and "internal" developmental factors equally strongly. If we were mapping this onto some sort of nature-nuruture distinction (not perfect, but tempting), I think we'd say that there's no evidence for participants favoring either nature or nurture over the other as an explanation for growth in the capacities we included in this study.
+3. However, their endorsement of "external" and "internal" developmental factors varied by domain. They perceived "external" factors to play a larger role in the domains of _social connection and positive emotions_ and especially _cognition and control_, and a relatively small role in the domain of _negative emotions_. (Looking at the plots, it seems like external factors were perceived as much more important than internal factors for _cognition and control_, a bit more important than internal factors for _social connection and positive emotions_, roughly equally important to internal factors for _negative emotions_, and less important than internal factors for _bodily sensations_. These interaction terms just confirm that the difference between "external" and "internal" varied significantly across domains.) 
+
+
 # Table: Answers to (optional) free-response question about other developmental factors
 
 ```{r}
@@ -964,6 +1120,7 @@ d_dev_factor_other %>%
     "COG" = "Cognition & control",
     .default = NA_character_),
     capacity = gsub("_", " ", capacity)) %>%
+  filter(response != "idk") %>%
   distinct(domain, capacity, response) %>%
   arrange(domain, capacity, response) %>%
   kable(caption = "Free responses to optional question about other developmental factors that might play a role (excluding answers like 'N/A,' 'no,' 'not that I can think of', etc.)") %>%

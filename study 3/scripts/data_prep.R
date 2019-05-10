@@ -166,13 +166,8 @@ d2 <- d1 %>%
          pass_embed == T,
          attn_free_coded == "pass")
 
-# remove people with another identical set of GPS coordinates among people who passed attention checks
-d3 <- d2 %>%
-  filter(duplicateGPS == F) %>%
-  select(-duplicateGPS)
-
 # recode variables & drop extraneous variables
-d4 <- d3 %>%
+d3 <- d2 %>%
   select(-c(EndDate, Finished, 
             payment, Progress, 
             RecordedDate, StartDate, Status, 
@@ -206,7 +201,13 @@ d4 <- d3 %>%
 
 # make useful datasets
 # final dataset with all measured variables
-d <- d4 %>% distinct()
+d <- d3 %>% distinct()
+
+# remove people with another identical set of GPS coordinates among people who passed attention checks
+d_nodup <- d %>%
+  filter(duplicateGPS == F) %>%
+  select(-duplicateGPS)
+# NOTE: this is NOT treated as our primary dataset here
 
 # demographic information
 d_demo <- d %>% 
@@ -449,4 +450,4 @@ d_dev_factor_other <- d %>%
          !grepl("don\\;t think so", tolower(response)))
 
 # remove extra dataframes
-rm(attn_embed_key, d_attn_embed, d_attn_free, d0, d1, d2, d3, d4)
+rm(attn_embed_key, d_attn_embed, d_attn_free, d0, d1, d2, d3)
