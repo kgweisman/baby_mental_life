@@ -15,6 +15,8 @@ library(langcog) # source: https://github.com/langcog/langcog-package
 library(psych)
 library(lme4)
 library(kableExtra)
+library(ggdendro)
+library(dendextend)
 
 # set theme for ggplots
 theme_set(theme_bw())
@@ -32,7 +34,7 @@ source("./scripts/data_prep.R")
 
 "Baby Mental Life: Study 3" was conducted on MTurk on 2019-04-24.
 
-Our planned sample was 300 participants; based on Study 2, we initially recruited 352 participants. After filtering out participants who failed at least one of our attention checks, we ended up retaining `r nrow(d)` participants (retention rate: `r round(nrow(d)/352, 3)*100`%), but at this point we have _not_ supplemented with additional recruiting. At each stage, we recruited women and men through separate studies, in hopes of acquiring a roughly equal split between genders.
+Our planned sample was 300 participants; based on Study 2, we initially recruited 352 participants. After filtering out participants who failed at least one of our attention checks, we ended up retaining 279 participants (retention rate: `r round(nrow(d)/352, 3)*100`%). We then supplemented by recruiting an additional 28 participants, with the goal of attaining our planned sample (300 - 279 = 21 participants, 279/352 * 28 = 22). At each stage, we recruited women and men through separate studies, in hopes of acquiring a roughly equal split between genders.
 
 In the end, we ended up with a sample of `r nrow(d)` participants who passed our attention checks, `r nrow(d_nodup)` of whom came from unique GPS coordinates (`r round(nrow(d_nodup)/nrow(d), 3)*100`%).
 
@@ -165,7 +167,7 @@ contrasts_domain_eff_noBOD <- cbind(POS = c(-1, 0, 0, 1),
 
 ```{r}
 # r1_noBOD <- lmer(response ~ target_num * domain
-#                  + (target_num + domain | ResponseId) 
+#                  + (target_num + domain | ResponseId)
 #                  + (target_num | capacity),
 #                  d_cap_rating %>%
 #                    mutate(target_num = target_num/12),
@@ -305,16 +307,16 @@ summary(r3_noBOD, corr = F)
 ```
 
 ```{r, include = F}
-# # r4_noBOD <- lmer(response ~ poly(sqrt(target_num), 3) * domain
-# #                  + (target_num + domain | ResponseId)
-# #                  + (target_num | capacity),
-# #                  d_cap_rating %>%
-# #                    mutate(target_num = target_num/12),
-# #                  contrasts = list(domain = contrasts_domain_eff_noBOD))
-# # saveRDS(r4_noBOD, "./models/r4_noBOD.RDS")
-# 
-# r4_noBOD <- readRDS("./models/r4_noBOD.RDS")
-# summary(r4_noBOD, corr = F)
+# r4_noBOD <- lmer(response ~ poly(sqrt(target_num), 3) * domain
+#                  + (target_num + domain | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12),
+#                  contrasts = list(domain = contrasts_domain_eff_noBOD))
+# saveRDS(r4_noBOD, "./models/r4_noBOD.RDS")
+
+r4_noBOD <- readRDS("./models/r4_noBOD.RDS")
+summary(r4_noBOD, corr = F)
 ```
 
 ```{r, include = F}
@@ -331,16 +333,16 @@ summary(r3_noNEG, corr = F)
 ```
 
 ```{r, include = F}
-# # r4_noNEG <- lmer(response ~ poly(sqrt(target_num), 3) * domain
-# #                  + (target_num + domain | ResponseId)
-# #                  + (target_num | capacity),
-# #                  d_cap_rating %>%
-# #                    mutate(target_num = target_num/12),
-# #                  contrasts = list(domain = contrasts_domain_eff_noNEG))
-# # saveRDS(r4_noNEG, "./models/r4_noNEG.RDS")
-# 
-# r4_noNEG <- readRDS("./models/r4_noNEG.RDS")
-# summary(r4_noNEG, corr = F)
+# r4_noNEG <- lmer(response ~ poly(sqrt(target_num), 3) * domain
+#                  + (target_num + domain | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12),
+#                  contrasts = list(domain = contrasts_domain_eff_noNEG))
+# saveRDS(r4_noNEG, "./models/r4_noNEG.RDS")
+
+r4_noNEG <- readRDS("./models/r4_noNEG.RDS")
+summary(r4_noNEG, corr = F)
 ```
 
 ```{r, include = F}
@@ -357,16 +359,16 @@ summary(r3_noPOS, corr = F)
 ```
 
 ```{r, include = F}
-# # r4_noPOS <- lmer(response ~ poly(sqrt(target_num), 3) * domain
-# #                  + (target_num + domain | ResponseId)
-# #                  + (target_num | capacity),
-# #                  d_cap_rating %>%
-# #                    mutate(target_num = target_num/12),
-# #                  contrasts = list(domain = contrasts_domain_eff_noPOS))
-# # saveRDS(r4_noPOS, "./models/r4_noPOS.RDS")
-# 
-# r4_noPOS <- readRDS("./models/r4_noPOS.RDS")
-# summary(r4_noPOS, corr = F)
+# r4_noPOS <- lmer(response ~ poly(sqrt(target_num), 3) * domain
+#                  + (target_num + domain | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12),
+#                  contrasts = list(domain = contrasts_domain_eff_noPOS))
+# saveRDS(r4_noPOS, "./models/r4_noPOS.RDS")
+
+r4_noPOS <- readRDS("./models/r4_noPOS.RDS")
+summary(r4_noPOS, corr = F)
 ```
 
 ```{r, include = F}
@@ -383,16 +385,16 @@ summary(r3_noCOG, corr = F)
 ```
 
 ```{r, include = F}
-# # r4_noCOG <- lmer(response ~ poly(sqrt(target_num), 3) * domain
-# #                  + (target_num + domain | ResponseId)
-# #                  + (target_num | capacity),
-# #                  d_cap_rating %>%
-# #                    mutate(target_num = target_num/12),
-# #                  contrasts = list(domain = contrasts_domain_eff_noCOG))
-# # saveRDS(r4_noCOG, "./models/r4_noCOG.RDS")
-# 
-# r4_noCOG <- readRDS("./models/r4_noCOG.RDS")
-# summary(r4_noCOG, corr = F)
+# r4_noCOG <- lmer(response ~ poly(sqrt(target_num), 3) * domain
+#                  + (target_num + domain | ResponseId)
+#                  + (target_num | capacity),
+#                  d_cap_rating %>%
+#                    mutate(target_num = target_num/12),
+#                  contrasts = list(domain = contrasts_domain_eff_noCOG))
+# saveRDS(r4_noCOG, "./models/r4_noCOG.RDS")
+
+r4_noCOG <- readRDS("./models/r4_noCOG.RDS")
+summary(r4_noCOG, corr = F)
 ```
 
 
@@ -956,43 +958,96 @@ ggplot(d_dev_factor_rating %>%
 
 It could be nice to reduce the number of "devleopmental factors" from 10 down to something more manageable for analysis. Here I explore EFA and hierarchical clustering as dimension reduction methods, and re-plot with these results in mind.
 
+Parallel to what we've done for dimensionality reduction across capacities, to do this I'll ignore some aspects of the within-subjects design of this study. I'll consider each combination of participant and capacity to be a separate set of observations for this analysis (effectively, acting as though each participant were really 8 different participants, each of whom evaluated a different capacity on the 10 developmental factors included in the study).
+
 ```{r}
-temp <- d_dev_factor_rating %>%
+d_dev_factor_rating_wide <- d_dev_factor_rating %>%
   unite(key, ResponseId, domain, capacity) %>%
+  # mutate(response = response - 3) %>% # center at 0
   spread(dev_factor, response) %>%
   column_to_rownames("key")
 ```
 
-```{r}
-reten_fun(temp, "varimax")
-# fa.parallel(temp)
-# VSS(temp)
-```
+## Exploratory factor analysis
 
 ```{r}
-temp_efa <- fa(temp,
-               nfactors = reten_fun(temp, "varimax"),
-               rotate = "varimax")
+reten_fun(d_dev_factor_rating_wide, chosen_rot)
 ```
 
-```{r, fig.width = 2, fig.asp = 0.8}
-heatmap_fun(temp_efa) + 
-  guides(fill = guide_colorbar(barheight = 8, barwidth = 0.5))
+```{r}
+fa.parallel(d_dev_factor_rating_wide)
 ```
 
-```{r, fig.width = 3, fig.asp = 0.6}
-library(ggdendro)
-library(dendextend)
+```{r}
+VSS(d_dev_factor_rating_wide, rotate = chosen_rot)
+```
 
-temp_hclust <- temp %>%
+Different factor retention protocols suggest retaining different numbers of factors (2, 4, or 5):
+
+```{r}
+dev_factor_rating_efa2 <- fa(d_dev_factor_rating_wide,
+                             nfactors = 2,
+                             rotate = chosen_rot)
+```
+
+```{r, fig.width = 3, fig.asp = 0.7}
+heatmap_fun(dev_factor_rating_efa2) + 
+  guides(fill = guide_colorbar(barheight = 8, barwidth = 0.5)) +
+  labs(title = "EFA of developmental factor ratings",
+       subtitle = "Retaining 2 factors (retention protocol: Weisman et al., 2017)")
+```
+
+```{r}
+dev_factor_rating_efa4 <- fa(d_dev_factor_rating_wide,
+                             nfactors = 4,
+                             rotate = chosen_rot)
+```
+
+```{r, fig.width = 3, fig.asp = 0.7}
+heatmap_fun(dev_factor_rating_efa4) + 
+  guides(fill = guide_colorbar(barheight = 8, barwidth = 0.5)) +
+  labs(title = "EFA of developmental factor ratings",
+       subtitle = "Retaining 4 factors (retention protocol: parallel analysis)")
+```
+
+```{r}
+dev_factor_rating_efa5 <- fa(d_dev_factor_rating_wide,
+                             nfactors = 5,
+                             rotate = chosen_rot)
+```
+
+```{r, fig.width = 3, fig.asp = 0.7}
+heatmap_fun(dev_factor_rating_efa5) + 
+  guides(fill = guide_colorbar(barheight = 8, barwidth = 0.5)) +
+  labs(title = "EFA of developmental factor ratings",
+       subtitle = "Retaining 5 factors (retention protocol: minimizing BIC)")
+```
+
+The 2- and 4-factor solutions each seem to offer some advantages... the 5-factor solution is sensible too, it just doesn't offer much in the way of reducing the dataset!
+
+
+## Hierarchical clustering
+
+```{r}
+dev_factor_rating_hclust <- d_dev_factor_rating_wide %>%
   t() %>%
   dist() %>%
   hclust()
 
-temp_hclust_order <- data.frame(order = as.numeric(temp_hclust$order), 
-                                dev_factor = as.character(temp_hclust$labels))
+# dev_factor_rating_hclust_order <- data.frame(
+#   order = as.numeric(dev_factor_rating_hclust$order), 
+#   dev_factor = as.character(dev_factor_rating_hclust$labels))
 
-temp_hclust %>%
+# cannot figure out how to do this automatically!
+dev_factor_rating_hclust_order <- c("experiments", "people_teach",
+                                    "brain_changes", "observes_objects", 
+                                    "observes_people", "interacts_people", 
+                                    "preprogrammed", "womb_experiences", 
+                                    "body_grows", "senses_improve")
+```
+
+```{r, fig.width = 3, fig.asp = 0.6}
+dev_factor_rating_hclust %>%
   ggdendrogram(rotate = F) +
   theme_minimal() +
   theme(#axis.title = element_blank(),
@@ -1008,24 +1063,31 @@ temp_hclust %>%
   # plot(horiz = T, xlim = c(-100, 200))
 ```
 
+This looks a lot like the 2-factor EFA solution to me!
+
+## Re-plotting by cluster
+
+Let's proceed with the clustering of developmental factors suggested by the 2-factor EFA solution and by hierarchical clustering.
+
 ```{r}
-temp2 <- d_dev_factor_rating %>%
+d_dev_factor_rating_byclust <- d_dev_factor_rating %>%
   mutate(dev_factor_cluster = case_when(
     dev_factor %in% c("experiments", "people_teach", "brain_changes", 
                       "observes_objects", "observes_people", 
-                      "interacts_people") ~ "external",
+                      "interacts_people") ~ "extrinsic",
     dev_factor %in% c("preprogrammed", "womb_experiences", "body_grows", 
-                      "senses_improve") ~ "internal",
+                      "senses_improve") ~ "intrinsic",
     TRUE ~ NA_character_)) %>%
   mutate(dev_factor_cluster = factor(dev_factor_cluster),
-         response_cent = response - 3) %>%
-  left_join(temp_hclust_order)
+         dev_factor = factor(dev_factor,
+                             levels = dev_factor_rating_hclust_order),
+         response_cent = response - 3)
 
 contrasts_cluster_eff <- cbind(EXT = c(1, -1))
 ```
 
 ```{r, fig.width = 6, fig.asp = 0.7}
-ggplot(temp2 %>%
+ggplot(d_dev_factor_rating_byclust %>%
          mutate(domain = recode_factor(
            domain,
            "BOD" = "Bodily sensations",
@@ -1034,8 +1096,11 @@ ggplot(temp2 %>%
            "COG" = "Cognition & control",
            .default = NA_character_)) %>%
          mutate_at(vars(capacity, dev_factor),
-                   funs(gsub("_", " ", .))),
-       aes(x = reorder(dev_factor, as.numeric(dev_factor_cluster)), 
+                   funs(gsub("_", " ", .))) %>%
+         mutate(dev_factor = factor(
+           dev_factor,
+           levels = gsub("_", " ", dev_factor_rating_hclust_order))),
+       aes(x = dev_factor, 
            y = response, color = domain, shape = dev_factor_cluster)) +
   facet_wrap(~ domain ~ capacity, ncol = 4) +
   geom_jitter(alpha = 0.025, height = 0.2, width = 0.2, show.legend = F) +
@@ -1054,7 +1119,7 @@ ggplot(temp2 %>%
 ```
 
 ```{r, fig.width = 6, fig.asp = 0.7}
-ggplot(temp2 %>%
+ggplot(d_dev_factor_rating_byclust %>%
          mutate(domain = recode_factor(
            domain,
            "BOD" = "Bodily sensations",
@@ -1085,18 +1150,20 @@ ggplot(temp2 %>%
 
 
 ```{r}
-r_temp <- lmer(response ~ domain * dev_factor_cluster + 
-                 # (domain + dev_factor_cluster | ResponseId) +
-                 # including both random intercepts yields corr > 0.9
-                 (1 + dev_factor_cluster | ResponseId) +
-                 (1 | capacity) + (1 | dev_factor),
-               temp2,
-               contrasts = list(domain = contrasts_domain_eff_noBOD,
-                                dev_factor_cluster = contrasts_cluster_eff))
+r_dev_factor_rating <- lmer(response ~ domain * dev_factor_cluster + 
+                              # (domain + dev_factor_cluster | ResponseId) +
+                              # NOTE: including both random intercepts 
+                              # yields corr > 0.9
+                              (1 + dev_factor_cluster | ResponseId) +
+                              (1 | capacity) + (1 | dev_factor),
+                            d_dev_factor_rating_byclust,
+                            contrasts = list(
+                              domain = contrasts_domain_eff_noBOD,
+                              dev_factor_cluster = contrasts_cluster_eff))
 ```
 
 ```{r}
-summary(r_temp)
+summary(r_dev_factor_rating)
 ```
 
 (Note that domain was effect-coded and leaves out the _bodily sensations_ domain here, but we could re-code it in all the different ways to get the contrast between _bodily sensations_ and the grand mean as desired.)
@@ -1104,8 +1171,8 @@ summary(r_temp)
 I see three take-aways from these regression results, all of which I think I can see reflected in the plots above:
 
 1. Participants perceived the domain of _social connection and positive emotions_ to be particularly dramatically shaped by the set of developmental factors we included in this study (relative to the grand mean collapsing across domains).
-2. On the whole, participants endorsed "external" and "internal" developmental factors equally strongly. If we were mapping this onto some sort of nature-nuruture distinction (not perfect, but tempting), I think we'd say that there's no evidence for participants favoring either nature or nurture over the other as an explanation for growth in the capacities we included in this study.
-3. However, their endorsement of "external" and "internal" developmental factors varied by domain. They perceived "external" factors to play a larger role in the domains of _social connection and positive emotions_ and especially _cognition and control_, and a relatively small role in the domain of _negative emotions_. (Looking at the plots, it seems like external factors were perceived as much more important than internal factors for _cognition and control_, a bit more important than internal factors for _social connection and positive emotions_, roughly equally important to internal factors for _negative emotions_, and less important than internal factors for _bodily sensations_. These interaction terms just confirm that the difference between "external" and "internal" varied significantly across domains.) 
+2. On the whole, participants endorsed "extrinsic" and "intrinsic" developmental factors equally strongly. If we were mapping this onto some sort of nature-nuruture distinction (not perfect, but tempting), I think we'd say that there's no evidence for participants favoring either nature or nurture over the other as an explanation for growth in the capacities we included in this study.
+3. However, their endorsement of "extrinsic" and "intrinsic" developmental factors varied by domain. They perceived "extrinsic" factors to play a larger role in the domains of _social connection and positive emotions_ and especially _cognition and control_, and a relatively small role in the domain of _negative emotions_. (Looking at the plots, it seems like extrinsic factors were perceived as much more important than intrinsic factors for _cognition and control_, a bit more important than intrinsic factors for _social connection and positive emotions_, roughly equally important to intrinsic factors for _negative emotions_, and less important than intrinsic factors for _bodily sensations_. These interaction terms just confirm that the difference between "extrinsic" and "intrinsic" varied significantly across domains.) 
 
 
 # Table: Answers to (optional) free-response question about other developmental factors
@@ -1127,6 +1194,7 @@ d_dev_factor_other %>%
   kable_styling() %>%
   collapse_rows(1:2)
 ```
+
 
 # Plots: Most important developmental factor, by domain and capacity
 
@@ -1169,7 +1237,7 @@ ggplot(d_dev_factor_most_important_choice %>%
 ```
 
 ```{r, fig.width = 6, fig.asp = 0.7}
-temp_other <- d_dev_factor_most_important_choice %>% 
+d_dev_factor_most_important_choice_other <- d_dev_factor_most_important_choice %>% 
   filter(grepl("Other", response)) %>% 
   count(domain, capacity)
 
@@ -1208,7 +1276,7 @@ ggplot(d_dev_factor_most_important_choice %>%
   geom_bar() +
   labs(title = "Choice of most important developmental factor (Version 2)",
        subtitle = paste0("Excluding answers of 'other' (n < ", 
-                         max(temp_other$n) + 1, ") for any capacity"),
+                         max(d_dev_factor_most_important_choice_other$n) + 1, ") for any capacity"),
        color = "Domain",
        x = "Capacity (by domain)", 
        y = "Number of participants")
@@ -1229,6 +1297,104 @@ d_dev_factor_most_important_free %>%
   kable(caption = "Free responses when 'other' was selected as most important developmental factor") %>%
   kable_styling() %>%
   collapse_rows(1:2)
+```
+
+
+# Relationships between developmental factor ratings and capacity ratings
+
+```{r}
+temp <- d_cap_rating %>%
+  rename(response_cap_rating = response) %>%
+  full_join(d_dev_factor_rating_byclust %>%
+              rename(response_dev_factor = response))
+```
+
+```{r, fig.width = 8, fig.asp = 1}
+ggplot(temp %>% filter(target == "target00mo"),
+       aes(x = response_dev_factor, y = response_cap_rating, 
+           color = domain, group = capacity)) +
+  facet_grid(cols = vars(domain, capacity), 
+             rows = vars(dev_factor_cluster, dev_factor)) +
+  geom_jitter(alpha = 0.2) +
+  geom_smooth(color = "black", method = "lm") +
+  theme(legend.position = "none") +
+  labs(title = "Relationship between endorsement of extrinsic vs. intrinsic developmental factors and attributions of capaciites at birth",
+       x = "Endorsement of developmental factor",
+       y = "Capacity attriubtion")
+```
+
+```{r, fig.width = 10, fig.asp = 0.3}
+ggplot(temp,
+       aes(x = response_dev_factor, y = response_cap_rating)) +
+  facet_grid(dev_factor_cluster ~ target_ord) +
+  geom_jitter(alpha = 0.01, color = "gray") +
+  geom_smooth(aes(color = dev_factor, fill = dev_factor), method = "lm") +
+  scale_color_brewer(palette = "Paired") +
+  scale_fill_brewer(palette = "Paired") +
+  theme(legend.position = "bottom") +
+  labs(title = "Relationship between endorsement of extrinsic vs. intrinsic developmental factors and attributions of capacities at various target ages",
+       x = "Endorsement of developmental factor",
+       y = "Capacity attriubtion")
+```
+
+```{r, fig.width = 10, fig.asp = 0.5}
+ggplot(temp %>% filter(domain == "BOD"),
+       aes(x = response_dev_factor, y = response_cap_rating)) +
+  facet_grid(rows = vars(capacity, dev_factor_cluster),
+             cols = vars(target_ord)) +
+  geom_jitter(alpha = 0.04, color = "gray") +
+  geom_smooth(aes(color = dev_factor, fill = dev_factor), method = "lm") +
+  scale_color_brewer(palette = "Paired") +
+  scale_fill_brewer(palette = "Paired") +
+  theme(legend.position = "bottom") +
+  labs(title = "BODILY SENSATIONS: Relationship between endorsement of extrinsic vs. intrinsic developmental factors and attributions of capacities at various target ages",
+       x = "Endorsement of developmental factor",
+       y = "Capacity attriubtion")
+```
+
+```{r, fig.width = 10, fig.asp = 0.5}
+ggplot(temp %>% filter(domain == "NEG"),
+       aes(x = response_dev_factor, y = response_cap_rating)) +
+  facet_grid(rows = vars(capacity, dev_factor_cluster),
+             cols = vars(target_ord)) +
+  geom_jitter(alpha = 0.04, color = "gray") +
+  geom_smooth(aes(color = dev_factor, fill = dev_factor), method = "lm") +
+  scale_color_brewer(palette = "Paired") +
+  scale_fill_brewer(palette = "Paired") +
+  theme(legend.position = "bottom") +
+  labs(title = "NEGATIVE EMOTIONS: Relationship between endorsement of extrinsic vs. intrinsic developmental factors and attributions of capacities at various target ages",
+       x = "Endorsement of developmental factor",
+       y = "Capacity attriubtion")
+```
+
+```{r, fig.width = 10, fig.asp = 0.5}
+ggplot(temp %>% filter(domain == "POS"),
+       aes(x = response_dev_factor, y = response_cap_rating)) +
+  facet_grid(rows = vars(capacity, dev_factor_cluster),
+             cols = vars(target_ord)) +
+  geom_jitter(alpha = 0.04, color = "gray") +
+  geom_smooth(aes(color = dev_factor, fill = dev_factor), method = "lm") +
+  scale_color_brewer(palette = "Paired") +
+  scale_fill_brewer(palette = "Paired") +
+  theme(legend.position = "bottom") +
+  labs(title = "POSITIVE EMOTIONS & SOCIAL ABILITIES: Relationship between endorsement of extrinsic vs. intrinsic developmental factors and attributions of capacities at various target ages",
+       x = "Endorsement of developmental factor",
+       y = "Capacity attriubtion")
+```
+
+```{r, fig.width = 10, fig.asp = 0.5}
+ggplot(temp %>% filter(domain == "COG"),
+       aes(x = response_dev_factor, y = response_cap_rating)) +
+  facet_grid(rows = vars(capacity, dev_factor_cluster),
+             cols = vars(target_ord)) +
+  geom_jitter(alpha = 0.04, color = "gray") +
+  geom_smooth(aes(color = dev_factor, fill = dev_factor), method = "lm") +
+  scale_color_brewer(palette = "Paired") +
+  scale_fill_brewer(palette = "Paired") +
+  theme(legend.position = "bottom") +
+  labs(title = "COGNITION & CONTROL: Relationship between endorsement of extrinsic vs. intrinsic developmental factors and attributions of capacities at various target ages",
+       x = "Endorsement of developmental factor",
+       y = "Capacity attriubtion")
 ```
 
 

@@ -144,11 +144,12 @@ d_attn_embed <- d1 %>%
 
 # retrieve coding of free response attention/comprehension check
 d_attn_free <- readxl::read_excel("./data/attention check only/attention_check_coding_all.xlsx") %>%
+  full_join(readxl::read_excel("./data/attention check only/attention_check_coding_all_batch2.xlsx")) %>%
   filter(MATCH_simple == "3 matches") %>%
   select(ResponseId, Q36_coded_KW_simple) %>%
   rename(attn_free_coded = Q36_coded_KW_simple) %>%
   filter(attn_free_coded %in% c("pass", "fail")) %>%
-  full_join(read.csv("./data/attention check only/attention_check_coding_consensus.csv") %>%
+  full_join(read.csv("./data/attention check only/attention_check_coding_consensus.csv") %>% # includes both batches
     select(ResponseId, MATCH_FINAL_CONSENSUS) %>%
       rename(attn_free_coded = MATCH_FINAL_CONSENSUS)) %>%
   mutate(ResponseId = as.character(ResponseId))

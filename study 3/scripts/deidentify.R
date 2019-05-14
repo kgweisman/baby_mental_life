@@ -1,7 +1,7 @@
 library(tidyverse)
 
-d0_f <- read.csv("./data/raw/Baby mental life: Study 3 - WOMEN_April 24, 2019_06.52.csv")
-d0_m <- read.csv("./data/raw/Baby mental life: Study 3 - MEN_April 24, 2019_06.39.csv")
+d0_f <- read.csv("./data/raw/Baby mental life: Study 3 - MEN_May 10, 2019_07.28.csv")
+d0_m <- read.csv("./data/raw/Baby mental life: Study 3 - WOMEN_May 10, 2019_07.27.csv")
 d0 <- full_join(d0_f, d0_m)
 
 # get rid of repeating GPS coordinates
