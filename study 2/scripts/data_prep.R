@@ -80,9 +80,9 @@ d2 <- d1 %>%
          `target36mo_move_the_slider_to_fifty` == 50,
          Attention == "Yes")
 
-# remove people with another identical set of GPS coordinates among people who passed attention checks
+# remove people with another identical set of GPS coordinates among people who passed attention checks AS DESIRED
 d3 <- d2 %>%
-  filter(duplicateGPS == F) %>%
+  # filter(duplicateGPS == F) %>%
   select(-duplicateGPS)
 
 # recode variables & drop extraneous variables

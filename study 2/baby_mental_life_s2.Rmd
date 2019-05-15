@@ -1,7 +1,7 @@
 ---
 title: "Baby Mental Life: Study 2"
 subtitle: "Preregistered analyses"
-date: 2018-09-05
+date: 2019-05-15
 output: 
   html_notebook:
     toc: true
@@ -14,7 +14,7 @@ Our planned sample was 300 participants, and we anticipated that roughly 80% of 
 
 In the end, we ended up with a sample of 304 participants who passed our attention checks, 237 of whom came from unique GPS coordinates.
 
-**For this first pass, these data _exclude_ participants where there is another participant with an identical set of GPS coordinates as recorded by Qualtrics.**
+**For this first pass, these data _INCLUDE_ participants where there is another participant with an identical set of GPS coordinates as recorded by Qualtrics. Excluding these participants would exclude 67 participants.**
 
 Each participant assessed children's mental capacities at 13 target ages between the ages of 0 and 5 years. For each target, they rated 20 mental capacities on a scale from 0 (not at all capable) to 100 (completely capable). 
 
@@ -267,46 +267,46 @@ extra_var <- rownames(efa_S1$loadings)[!rownames(efa_S1$loadings) %in% rownames(
 
 temp <- d_all %>%
   rownames_to_column("subid") %>%
-  mutate(being_afraid_of_somebody = round(runif(3081, 0, 5)), 
-         being_angry_at_somebody = round(runif(3081, 0, 5)),
-         being_aware_of_things = round(runif(3081, 0, 5)), 
-         being_comforted_by_physical_touch = round(runif(3081, 0, 5)),
-         calming_themselves_down = round(runif(3081, 0, 5)), 
-         detecting_danger = round(runif(3081, 0, 5)), 
-         feeling_annoyed = round(runif(3081, 0, 5)), 
-         feeling_bored = round(runif(3081, 0, 5)), 
-         feeling_calm = round(runif(3081, 0, 5)),
-         feeling_confused = round(runif(3081, 0, 5)), 
-         feeling_embarrassed = round(runif(3081, 0, 5)), 
-         feeling_guilty = round(runif(3081, 0, 5)),
-         feeling_hopeless = round(runif(3081, 0, 5)), 
-         feeling_loved = round(runif(3081, 0, 5)), 
-         feeling_neglected = round(runif(3081, 0, 5)),
-         feeling_pleasure = round(runif(3081, 0, 5)), 
-         feeling_pride = round(runif(3081, 0, 5)), 
-         feeling_sad = round(runif(3081, 0, 5)),
-         feeling_safe = round(runif(3081, 0, 5)), 
-         feeling_scared = round(runif(3081, 0, 5)), 
-         feeling_textures = round(runif(3081, 0, 5)),
-         feeling_thirsty = round(runif(3081, 0, 5)), 
-         feeling_too_hot_or_too_cold = round(runif(3081, 0, 5)),
-         feeling_worried = round(runif(3081, 0, 5)), 
-         focusing_on_a_goal = round(runif(3081, 0, 5)), 
-         getting_angry = round(runif(3081, 0, 5)),
-         getting_hurt_feelings = round(runif(3081, 0, 5)), 
-         getting_pleasure_from_music = round(runif(3081, 0, 5)),
-         having_goals = round(runif(3081, 0, 5)), 
-         having_thoughts = round(runif(3081, 0, 5)), 
-         having_wants_and_desires = round(runif(3081, 0, 5)),
-         imagining_things = round(runif(3081, 0, 5)), 
-         listening_to_somebody = round(runif(3081, 0, 5)), 
-         making_choices = round(runif(3081, 0, 5)),
-         recognizing_others_emotions = round(runif(3081, 0, 5)), 
-         recognizing_somebody_else = round(runif(3081, 0, 5)),
-         remembering_things = round(runif(3081, 0, 5)), 
-         seeing = round(runif(3081, 0, 5)), 
-         thinking_before_they_act = round(runif(3081, 0, 5)),
-         understanding_what_somebody_else_is_thinking = round(runif(3081, 0, 5))) %>%
+  mutate(being_afraid_of_somebody = round(runif(3952, 0, 5)), 
+         being_angry_at_somebody = round(runif(3952, 0, 5)),
+         being_aware_of_things = round(runif(3952, 0, 5)), 
+         being_comforted_by_physical_touch = round(runif(3952, 0, 5)),
+         calming_themselves_down = round(runif(3952, 0, 5)), 
+         detecting_danger = round(runif(3952, 0, 5)), 
+         feeling_annoyed = round(runif(3952, 0, 5)), 
+         feeling_bored = round(runif(3952, 0, 5)), 
+         feeling_calm = round(runif(3952, 0, 5)),
+         feeling_confused = round(runif(3952, 0, 5)), 
+         feeling_embarrassed = round(runif(3952, 0, 5)), 
+         feeling_guilty = round(runif(3952, 0, 5)),
+         feeling_hopeless = round(runif(3952, 0, 5)), 
+         feeling_loved = round(runif(3952, 0, 5)), 
+         feeling_neglected = round(runif(3952, 0, 5)),
+         feeling_pleasure = round(runif(3952, 0, 5)), 
+         feeling_pride = round(runif(3952, 0, 5)), 
+         feeling_sad = round(runif(3952, 0, 5)),
+         feeling_safe = round(runif(3952, 0, 5)), 
+         feeling_scared = round(runif(3952, 0, 5)), 
+         feeling_textures = round(runif(3952, 0, 5)),
+         feeling_thirsty = round(runif(3952, 0, 5)), 
+         feeling_too_hot_or_too_cold = round(runif(3952, 0, 5)),
+         feeling_worried = round(runif(3952, 0, 5)), 
+         focusing_on_a_goal = round(runif(3952, 0, 5)), 
+         getting_angry = round(runif(3952, 0, 5)),
+         getting_hurt_feelings = round(runif(3952, 0, 5)), 
+         getting_pleasure_from_music = round(runif(3952, 0, 5)),
+         having_goals = round(runif(3952, 0, 5)), 
+         having_thoughts = round(runif(3952, 0, 5)), 
+         having_wants_and_desires = round(runif(3952, 0, 5)),
+         imagining_things = round(runif(3952, 0, 5)), 
+         listening_to_somebody = round(runif(3952, 0, 5)), 
+         making_choices = round(runif(3952, 0, 5)),
+         recognizing_others_emotions = round(runif(3952, 0, 5)), 
+         recognizing_somebody_else = round(runif(3952, 0, 5)),
+         remembering_things = round(runif(3952, 0, 5)), 
+         seeing = round(runif(3952, 0, 5)), 
+         thinking_before_they_act = round(runif(3952, 0, 5)),
+         understanding_what_somebody_else_is_thinking = round(runif(3952, 0, 5))) %>%
   column_to_rownames("subid")
 
 scores_project <- predict.psych(object = efa_S1, data = temp)
@@ -453,7 +453,7 @@ We can talk through these interpretations together - but I find the difference b
 
 # Demographics
 
-```{r}
+```{r, include = T}
 ggplot(d_demo, aes(x = Duration/60)) + 
   geom_histogram(binwidth = 2) +
   geom_vline(xintercept = median(d_demo$Duration/60), color = "blue", lty = 2) +
@@ -464,7 +464,18 @@ ggplot(d_demo, aes(x = Duration/60)) +
        y = "Number of participants")
 ```
 
-```{r}
+```{r, include = T}
+d_demo %>%
+  distinct(ResponseId, Duration) %>%
+  mutate(Duration = Duration/60) %>%
+  summarise(median = median(Duration),
+            mean = mean(Duration, na.rm = T),
+            sd = sd(Duration, na.rm = T),
+            min = min(Duration, na.rm = T),
+            max = max(Duration, na.rm = T))
+```
+
+```{r, include = T}
 ggplot(d_demo, aes(x = Age)) + 
   geom_histogram(binwidth = 2) +
   geom_vline(xintercept = median(d_demo$Age), color = "blue", lty = 2) +
@@ -475,7 +486,17 @@ ggplot(d_demo, aes(x = Age)) +
        y = "Number of participants")
 ```
 
-```{r}
+```{r, include = T}
+d_demo %>%
+  distinct(ResponseId, Age) %>%
+  summarise(median = median(Age),
+            mean = mean(Age, na.rm = T),
+            sd = sd(Age, na.rm = T),
+            min = min(Age, na.rm = T),
+            max = max(Age, na.rm = T))
+```
+
+```{r, include = T}
 ggplot(d_demo, aes(x = GenderSex)) + 
   geom_bar() +
   labs(title = "Particpiant gender/sex (self-reported)",
@@ -483,7 +504,14 @@ ggplot(d_demo, aes(x = GenderSex)) +
        y = "Number of participants")
 ```
 
-```{r}
+```{r, include = T}
+d_demo %>%
+  distinct(ResponseId, GenderSex) %>%
+  count(GenderSex) %>%
+  mutate(prop = round(n/sum(n, na.rm = T), 2))
+```
+
+```{r, include = T}
 ggplot(d_demo, aes(x = gsub('(.{1,30})(\\s|$)', '\\1\n', RaceEthnicity_collapse))) + 
   geom_bar() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
@@ -492,7 +520,15 @@ ggplot(d_demo, aes(x = gsub('(.{1,30})(\\s|$)', '\\1\n', RaceEthnicity_collapse)
        y = "Number of participants")
 ```
 
-```{r}
+```{r, include = T}
+d_demo %>%
+  distinct(ResponseId, RaceEthnicity_collapse) %>%
+  count(RaceEthnicity_collapse) %>%
+  mutate(prop = round(n/sum(n, na.rm = T), 2)) %>%
+  arrange(desc(n))
+```
+
+```{r, include = T}
 ggplot(d_demo, aes(x = FirstLang)) + 
   geom_bar() +
   labs(title = "Particpiant first language (self-reported)",
@@ -500,7 +536,15 @@ ggplot(d_demo, aes(x = FirstLang)) +
        y = "Number of participants")
 ```
 
-```{r}
+```{r, include = T}
+d_demo %>%
+  distinct(ResponseId, FirstLang) %>%
+  count(FirstLang) %>%
+  mutate(prop = round(n/sum(n, na.rm = T), 2)) %>%
+  arrange(desc(n))
+```
+
+```{r, include = T}
 ggplot(d_demo, aes(x = factor(Education,
                               levels = levels(d$Education),
                               labels = gsub('(.{1,30})(\\s|$)', '\\1\n', 
@@ -512,7 +556,14 @@ ggplot(d_demo, aes(x = factor(Education,
        y = "Number of participants")
 ```
 
-```{r}
+```{r, include = T}
+d_demo %>%
+  distinct(ResponseId, Education) %>%
+  count(Education) %>%
+  mutate(prop = round(n/sum(n, na.rm = T), 2))
+```
+
+```{r, include = T}
 ggplot(d_demo, aes(x = Income)) + 
   geom_bar() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
@@ -521,7 +572,14 @@ ggplot(d_demo, aes(x = Income)) +
        y = "Number of participants")
 ```
 
-```{r}
+```{r, include = T}
+d_demo %>%
+  distinct(ResponseId, Income) %>%
+  count(Income) %>%
+  mutate(prop = round(n/sum(n, na.rm = T), 2))
+```
+
+```{r, include = T}
 ggplot(d_demo, aes(x = HouseholdSize)) + 
   geom_histogram(binwidth = 1) +
   geom_vline(xintercept = median(d_demo$HouseholdSize), color = "blue", lty = 2) +
@@ -532,7 +590,17 @@ ggplot(d_demo, aes(x = HouseholdSize)) +
        y = "Number of participants")
 ```
 
-```{r}
+```{r, include = T}
+d_demo %>%
+  distinct(ResponseId, HouseholdSize) %>%
+  summarise(median = median(HouseholdSize),
+            mean = mean(HouseholdSize, na.rm = T),
+            sd = sd(HouseholdSize, na.rm = T),
+            min = min(HouseholdSize, na.rm = T),
+            max = max(HouseholdSize, na.rm = T))
+```
+
+```{r, include = T}
 ggplot(d_demo, aes(x = MaritalStatus)) + 
   geom_bar() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
@@ -541,7 +609,14 @@ ggplot(d_demo, aes(x = MaritalStatus)) +
        y = "Number of participants")
 ```
 
-```{r}
+```{r, include = T}
+d_demo %>%
+  distinct(ResponseId, MaritalStatus) %>%
+  count(MaritalStatus) %>%
+  mutate(prop = round(n/sum(n, na.rm = T), 2))
+```
+
+```{r, include = T}
 ggplot(d_demo, aes(x = Parent)) + 
   geom_bar() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
@@ -551,7 +626,14 @@ ggplot(d_demo, aes(x = Parent)) +
        y = "Number of participants")
 ```
 
-```{r}
+```{r, include = T}
+d_demo %>%
+  distinct(ResponseId, Parent) %>%
+  count(Parent) %>%
+  mutate(prop = round(n/sum(n, na.rm = T), 2))
+```
+
+```{r, include = T}
 ggplot(d_demo %>% filter(Parent == "Yes"), aes(x = ChildrenNumber)) + 
   geom_histogram(binwidth = 1) +
   geom_vline(xintercept = median(d_demo[d_demo$Parent == "Yes",]$ChildrenNumber, na.rm = T), 
@@ -563,7 +645,7 @@ ggplot(d_demo %>% filter(Parent == "Yes"), aes(x = ChildrenNumber)) +
        y = "Number of participants")
 ```
 
-```{r}
+```{r, include = T}
 ggplot(d_demo %>% filter(Parent == "Yes"), 
        aes(x = factor(ChildrenOldestAge_collapse,
                       levels = levels(d_demo$ChildrenOldestAge_collapse),
@@ -576,7 +658,7 @@ ggplot(d_demo %>% filter(Parent == "Yes"),
        y = "Number of participants")
 ```
 
-```{r}
+```{r, include = T}
 ggplot(d_demo %>% filter(Parent == "Yes"), 
        aes(x = factor(ChildrenYoungestAge_collapse,
                       levels = levels(d_demo$ChildrenYoungestAge_collapse),
