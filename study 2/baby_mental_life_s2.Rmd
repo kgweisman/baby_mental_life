@@ -8,6 +8,10 @@ output:
     toc_float: true
 ---
 
+```{r global_options, include = F}
+knitr::opts_chunk$set(fig.width = 3, fig.asp = 0.67, include = T, echo = F)
+```
+
 "Baby Mental Life: Study 2" was conducted on MTurk on 2018-08-04.
 
 Our planned sample was 300 participants, and we anticipated that roughly 80% of recruited participants would pass all of our attention checks, so we initially recruited 378 participants (on the idea that ~80% of 378 ~ 300 participants; note that for administrative purposes we need to recuit participants in batches that were divisible by 9). After filtering out participants who failed at least one of our attention checks, we ended up retaining fewer than 300 participants, so we recruited an additional 16 participants for a total of 394 people recruited. At each stage, we recruited women and men through separate studies, in hopes of acquiring a roughly equal split between genders.

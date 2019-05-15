@@ -8,9 +8,8 @@ output:
 ---
 
 ```{r global_options, include = F}
-knitr::opts_chunk$set(fig.width = 3, fig.asp = 0.67)
+knitr::opts_chunk$set(fig.width = 3, fig.asp = 0.67, include = T, echo = F)
 ```
-
 
 "Baby Mental Life: Study 1" was conducted on MTurk on 2018-07-31 through 2018-08-01.
 
@@ -322,7 +321,7 @@ efa_all_par <- fa(d_all, nfactors = reten_all_par, rotate = chosen_rot,
                   scores = "tenBerge", impute = "median")
 ```
 
-```{r, fig.width = 4, fig.asp = 1.5}
+```{r, fig.width = 4, fig.asp = 1.5, include = T}
 heatmap_fun(efa_all_par) + 
   labs(title = paste0("Parallel Analysis (rotation: ", chosen_rot, ")"),
        subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
@@ -330,7 +329,7 @@ heatmap_fun(efa_all_par) +
 
 ### Which capacities are attributed to which targets?
 
-```{r, fig.width = 4, fig.asp = 0.6}
+```{r, fig.width = 4, fig.asp = 0.6, include = T}
 scoresplot_fun(efa_all_par, target = "all (study 1)") + 
   labs(title = "Parallel Analysis") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
@@ -338,7 +337,7 @@ scoresplot_fun(efa_all_par, target = "all (study 1)") +
 
 Here's a multilevel linear regression on these factor scores, with random intercepts and slopes (for target and factor) by participant. Target is coded with linear and quadratic contrasts, and factor is effect-coded for comparison with the grand mean (with the last factor as the base, -1):
 
-```{r}
+```{r, include = T}
 efa_all_par_scores <- efa_all_par$scores[] %>%
   data.frame() %>%
   rownames_to_column("subid") %>%
@@ -369,7 +368,7 @@ If we consider t-values > 2 to be "significant" and use the plot above to guide 
 - `target.L:factor3`: The linear increase is more dramatic (steeper slope) for MR3, compared to other factors. 
 - `target.Q:factor3`: The nonlinearity is less dramatic (flatter curve) for MR3, compared to other factors. 
 
-```{r, fig.width = 5, fig.asp = 1}
+```{r, fig.width = 5, fig.asp = 1, include = T}
 itemsplot_fun(efa_all_par, target = "all") + 
   labs(title = "Parallel Analysis")
 ```
@@ -394,7 +393,7 @@ efa_all_bic <- fa(d_all, nfactors = reten_all_bic, rotate = chosen_rot,
                   scores = "tenBerge", impute = "median")
 ```
 
-```{r, fig.width = 4, fig.asp = 1.5}
+```{r, fig.width = 5, fig.asp = 1.5, include = T}
 heatmap_fun(efa_all_bic) + 
   labs(title = paste0("Minimizing BIC (rotation: ", chosen_rot, ")"),
        subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
@@ -402,7 +401,7 @@ heatmap_fun(efa_all_bic) +
 
 ### Which capacities are attributed to which targets?
 
-```{r, fig.width = 5, fig.asp = 0.6}
+```{r, fig.width = 5, fig.asp = 0.6, include = T}
 scoresplot_fun(efa_all_bic, target = "all (study 1)") + 
   labs(title = "Minimizing BIC") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
@@ -446,7 +445,7 @@ If we consider t-values > 2 to be "significant" and use the plot above to guide 
 - `target.L:factor5`: The linear increase is more dramatic (steeper slope) for MR5, compared to other factors. 
 - `target.Q:factor5`: The nonlinearity is less dramatic (flatter curve) for MR5, compared to other factors. 
 
-```{r, fig.width = 5, fig.asp = 1}
+```{r, fig.width = 5, fig.asp = 1, include = T}
 itemsplot_fun(efa_all_bic, target = "all") + 
   labs(title = "Minimizing BIC")
 ```
@@ -468,7 +467,7 @@ efa_all_k <- fa(d_all, nfactors = reten_all_k, rotate = chosen_rot,
                   scores = "tenBerge", impute = "median")
 ```
 
-```{r, fig.width = 4, fig.asp = 1.5}
+```{r, fig.width = 4, fig.asp = 1.5, include = T}
 heatmap_fun(efa_all_k) + 
   labs(title = paste0("Preset criteria (rotation: ", chosen_rot, ")"),
        subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
@@ -476,14 +475,14 @@ heatmap_fun(efa_all_k) +
 
 ### Which capacities are attributed to which targets?
 
-```{r}
+```{r, include = T}
 scoresplot_fun(efa_all_k, target = "all (study 1)") + 
   labs(title = "Preset factor retention criteria (Weisman et al., 2017)")
 ```
 
 Here's a multilevel linear regression on these factor scores, with random intercepts and slopes (for target and factor) by participant. Target is coded with linear and quadratic contrasts, and factor is effect-coded for comparison with the grand mean (with the last factor as the base, -1):
 
-```{r}
+```{r, include = T}
 efa_all_k_scores <- efa_all_k$scores[] %>%
   data.frame() %>%
   rownames_to_column("subid") %>%
@@ -512,7 +511,7 @@ If we consider t-values > 2 to be "significant" and use the plot above to guide 
 - `target.L:factor1`: The linear increase is more dramatic (steeper slope) for MR1, compared to other factors. 
 - `target.Q:factor1`: The nonlinearity is more dramatic (curvier and/or concave instead of convex curve) for MR1, compared to other factors. 
 
-```{r, fig.width = 5, fig.asp = 1}
+```{r, fig.width = 5, fig.asp = 1, include = T}
 itemsplot_fun(efa_all_k, target = "all") + 
   labs(title = "Preset factor retention criteria (Weisman et al., 2017)")
 ```

@@ -33,14 +33,26 @@ heatmap_fun <- function(efa, factor_names = NA){
     select(-stat) %>%
     gather(factor, var) %>%
     mutate(factor = as.character(factor(factor, labels = factor_names))) %>%
-    mutate(var = paste0(factor, "\n(", round(var, 2)*100, "% var.)"))
+    mutate(var_shared = paste0(factor, "\n", round(var, 2)*100, "% shared var."))
+  
+  # get percent total variance explained
+  total_var <- efa$Vaccounted %>%
+    data.frame() %>%
+    rownames_to_column("stat") %>%
+    filter(stat == "Proportion Var") %>%
+    select(-stat) %>%
+    gather(factor, var) %>%
+    mutate(factor = as.character(factor(factor, labels = factor_names))) %>%
+    mutate(var_total = paste0(round(var, 2)*100, "% total var."))
   
   # make plot
   plot <- ggplot(loadings %>% 
                    left_join(order) %>%
-                   left_join(shared_var) %>%
-                   mutate(capacity = gsub("_", " ", capacity)),
-                 aes(x = var, 
+                   left_join(shared_var %>% select(-var)) %>%
+                   left_join(total_var %>% select(-var)) %>%
+                   mutate(capacity = gsub("_", " ", capacity),
+                          xlab = paste(var_shared, var_total, sep = "\n")),
+                 aes(x = xlab, 
                      y = reorder(capacity, order), 
                      fill = loading, 
                      label = format(round(loading, 2), nsmall = 2))) +
@@ -48,11 +60,11 @@ heatmap_fun <- function(efa, factor_names = NA){
     geom_text(size = 3) +
     scale_fill_distiller(limits = c(-1, 1), 
                          palette = "RdYlBu",
-                         guide = guide_colorbar(barheight = 20)) +
+                         guide = guide_colorbar(barheight = 10)) +
     theme_minimal() +
     scale_x_discrete(position = "top") +
     theme(axis.title = element_blank())
-
+  
   return(plot)
   
 }
