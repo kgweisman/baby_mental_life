@@ -9,12 +9,26 @@ heatmap_fun <- function(efa, factor_names = NA){
     factor_names <- paste("Factor", 1:efa$factors)
   }
   
+  # put factors in a standard order when applicable
+  body_factors <- factor_names[grepl("BODY", factor_names)]
+  
+  leftovers <- factor_names[!factor_names %in% body_factors]
+  heart_factors <- leftovers[grepl("HEART", leftovers)]
+  
+  leftovers <- leftovers[!leftovers %in% heart_factors]
+  mind_factors <- leftovers[grepl("MIND", leftovers)]
+  
+  other_factors <- leftovers[!leftovers %in% mind_factors]
+  
+  factor_levels <- c(body_factors, heart_factors, mind_factors, other_factors)
+  
   # get factor loadings
   loadings <- efa$loadings[] %>%
     data.frame() %>%
     rownames_to_column("capacity") %>%
     gather(factor, loading, -capacity) %>%
-    mutate(factor = as.character(factor(factor, labels = factor_names)))
+    mutate(factor = as.character(factor(factor, labels = factor_names)),
+           factor = factor(factor, levels = factor_levels))
   
   # get fa.sort() order
   order <- loadings %>%
@@ -32,8 +46,9 @@ heatmap_fun <- function(efa, factor_names = NA){
     filter(stat == "Proportion Explained") %>%
     select(-stat) %>%
     gather(factor, var) %>%
-    mutate(factor = as.character(factor(factor, labels = factor_names))) %>%
-    mutate(var_shared = paste0(factor, "\n", round(var, 2)*100, "% shared var."))
+    mutate(factor = as.character(factor(factor, labels = factor_names)),
+           factor = factor(factor, levels = factor_levels)) %>%
+    mutate(var_shared = paste0(factor, "\n", round(var, 2)*100, "% shared var.,"))
   
   # get percent total variance explained
   total_var <- efa$Vaccounted %>%
@@ -42,7 +57,8 @@ heatmap_fun <- function(efa, factor_names = NA){
     filter(stat == "Proportion Var") %>%
     select(-stat) %>%
     gather(factor, var) %>%
-    mutate(factor = as.character(factor(factor, labels = factor_names))) %>%
+    mutate(factor = as.character(factor(factor, labels = factor_names)),
+           factor = factor(factor, levels = factor_levels)) %>%
     mutate(var_total = paste0(round(var, 2)*100, "% total var."))
   
   # make plot
@@ -51,8 +67,9 @@ heatmap_fun <- function(efa, factor_names = NA){
                    left_join(shared_var %>% select(-var)) %>%
                    left_join(total_var %>% select(-var)) %>%
                    mutate(capacity = gsub("_", " ", capacity),
+                          factor = factor(factor, levels = factor_levels),
                           xlab = paste(var_shared, var_total, sep = "\n")),
-                 aes(x = xlab, 
+                 aes(x = reorder(xlab, as.numeric(factor)), 
                      y = reorder(capacity, order), 
                      fill = loading, 
                      label = format(round(loading, 2), nsmall = 2))) +

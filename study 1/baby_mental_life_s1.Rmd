@@ -323,9 +323,62 @@ efa_all_par <- fa(d_all, nfactors = reten_all_par, rotate = chosen_rot,
 
 ```{r, fig.width = 4, fig.asp = 1.5, include = T}
 heatmap_fun(efa_all_par) + 
-  labs(title = paste0("Parallel Analysis (rotation: ", chosen_rot, ")"),
-       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+  labs(title = paste0("Parallel Analysis (rotation: ", chosen_rot, ")"))
 ```
+
+```{r, fig.width = 4.5, fig.asp = 1.25, include = F}
+heatmap_fun(efa_all_par, factor_names = c("Cognition and control", "Bodily sensations", "Social connection", "Negative affect")) + 
+  labs(title = "Study 1: Factor loadings from exploratory factor analysis (EFA)",
+       subtitle = "Four-factor solution suggested by parallel analysis, after oblique transformation (oblimin)")
+```
+
+```{r, include = F}
+# cross-loadings
+efa_all_par$loadings[] %>%
+  data.frame() %>%
+  rownames_to_column("capacity") %>%
+  gather(factor, loading, -capacity) %>%
+  filter(abs(loading) > 0.4) %>% 
+  count(capacity) %>%
+  filter(n > 1) %>%
+  select(-n) %>%
+  left_join(efa_all_par$loadings[] %>%
+              data.frame() %>%
+              rownames_to_column("capacity") %>%
+              gather(factor, loading, -capacity) %>%
+              filter(abs(loading) > 0.4) %>%
+              mutate(loading = round(loading, 3)) %>%
+              spread(factor, loading)) %>%
+  rename(COG = MR1, BOD = MR2, POS = MR3, NEG = MR4)
+```
+
+```{r}
+# interfactor correlations
+efa_all_par$Phi %>%
+  data.frame() %>%
+  rownames_to_column("factorA") %>%
+  gather(factorB, phi, -factorA) %>%
+  arrange(desc(phi))
+```
+
+```{r}
+efa_all_par$loadings[] %>%
+  data.frame() %>%
+  rownames_to_column("capacity") %>%
+  gather(factor, loading, -capacity) %>%
+  # group_by(capacity) %>%
+  # top_n(1, abs(loading)) %>%
+  # ungroup() %>%
+  filter(abs(loading) >= 0.6) %>%
+  count(factor)
+
+efa_all_par$loadings[] %>%
+  data.frame() %>%
+  rownames_to_column("capacity") %>%
+  select(capacity, MR4) %>%
+  arrange(desc(abs(MR4)))
+```
+
 
 ### Which capacities are attributed to which targets?
 
@@ -395,8 +448,7 @@ efa_all_bic <- fa(d_all, nfactors = reten_all_bic, rotate = chosen_rot,
 
 ```{r, fig.width = 5, fig.asp = 1.5, include = T}
 heatmap_fun(efa_all_bic) + 
-  labs(title = paste0("Minimizing BIC (rotation: ", chosen_rot, ")"),
-       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+  labs(title = paste0("Minimizing BIC (rotation: ", chosen_rot, ")"))
 ```
 
 ### Which capacities are attributed to which targets?
@@ -450,6 +502,30 @@ itemsplot_fun(efa_all_bic, target = "all") +
   labs(title = "Minimizing BIC")
 ```
 
+### How do these compare to parallel analysis?
+
+```{r}
+efa_all_par$loadings[] %>%
+  data.frame() %>%
+  rownames_to_column("capacity") %>%
+  gather(factor, loading, -capacity) %>%
+  group_by(capacity) %>%
+  top_n(1, abs(loading)) %>%
+  ungroup() %>%
+  select(-loading) %>%
+  rename(par_factor = factor) %>%
+  left_join(efa_all_bic$loadings[] %>%
+              data.frame() %>%
+              rownames_to_column("capacity") %>%
+              gather(factor, loading, -capacity) %>%
+              group_by(capacity) %>%
+              top_n(1, abs(loading)) %>%
+              ungroup() %>%
+              select(-loading) %>%
+              rename(k_factor = factor)) %>%
+  count(par_factor, k_factor) %>%
+  spread(k_factor, n)
+```
 
 ## Preset retention criteria
 
@@ -469,8 +545,7 @@ efa_all_k <- fa(d_all, nfactors = reten_all_k, rotate = chosen_rot,
 
 ```{r, fig.width = 4, fig.asp = 1.5, include = T}
 heatmap_fun(efa_all_k) + 
-  labs(title = paste0("Preset criteria (rotation: ", chosen_rot, ")"),
-       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+  labs(title = paste0("Preset criteria (rotation: ", chosen_rot, ")"))
 ```
 
 ### Which capacities are attributed to which targets?
@@ -516,6 +591,31 @@ itemsplot_fun(efa_all_k, target = "all") +
   labs(title = "Preset factor retention criteria (Weisman et al., 2017)")
 ```
 
+### How do these compare to parallel analysis?
+
+```{r}
+efa_all_par$loadings[] %>%
+  data.frame() %>%
+  rownames_to_column("capacity") %>%
+  gather(factor, loading, -capacity) %>%
+  group_by(capacity) %>%
+  top_n(1, abs(loading)) %>%
+  ungroup() %>%
+  select(-loading) %>%
+  rename(par_factor = factor) %>%
+  left_join(efa_all_k$loadings[] %>%
+              data.frame() %>%
+              rownames_to_column("capacity") %>%
+              gather(factor, loading, -capacity) %>%
+              group_by(capacity) %>%
+              top_n(1, abs(loading)) %>%
+              ungroup() %>%
+              select(-loading) %>%
+              rename(k_factor = factor)) %>%
+  count(par_factor, k_factor) %>%
+  spread(k_factor, n)
+```
+
 
 # EFA: newborns
 
@@ -539,8 +639,7 @@ efa_00mo_par <- fa(d_00mo, nfactors = reten_00mo_par, rotate = chosen_rot,
 
 ```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_00mo_par) + 
-  labs(title = paste0("Parallel Analysis (rotation: ", chosen_rot, ")"),
-       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+  labs(title = paste0("Parallel Analysis (rotation: ", chosen_rot, ")"))
 ```
 
 ### Which capacities are attributed to newborns?
@@ -572,8 +671,7 @@ efa_00mo_bic <- fa(d_00mo, nfactors = reten_00mo_bic, rotate = chosen_rot,
 
 ```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_00mo_bic) + 
-  labs(title = paste0("Minimizing BIC (rotation: ", chosen_rot, ")"),
-       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+  labs(title = paste0("Minimizing BIC (rotation: ", chosen_rot, ")"))
 ```
 
 ### Which capacities are attributed to newborns?
@@ -602,8 +700,7 @@ efa_00mo_k <- fa(d_00mo, nfactors = reten_00mo_k, rotate = chosen_rot,
 
 ```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_00mo_k) + 
-  labs(title = paste0("Preset criteria (rotation: ", chosen_rot, ")"),
-       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+  labs(title = paste0("Preset criteria (rotation: ", chosen_rot, ")"))
 ```
 
 ### Which capacities are attributed to newborns?
@@ -636,8 +733,7 @@ efa_09mo_par <- fa(d_09mo, nfactors = reten_09mo_par, rotate = chosen_rot,
 
 ```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_09mo_par) + 
-  labs(title = paste0("Parallel analysis (rotation: ", chosen_rot, ")"),
-       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+  labs(title = paste0("Parallel analysis (rotation: ", chosen_rot, ")"))
 ```
 
 
@@ -670,8 +766,7 @@ efa_09mo_bic <- fa(d_09mo, nfactors = reten_09mo_bic, rotate = chosen_rot,
 
 ```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_09mo_bic) + 
-  labs(title = paste0("Minimizing BIC (rotation: ", chosen_rot, ")"),
-       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+  labs(title = paste0("Minimizing BIC (rotation: ", chosen_rot, ")"))
 ```
 
 ### Which capacities are attributed to 9-month-olds?
@@ -700,8 +795,7 @@ efa_09mo_k <- fa(d_09mo, nfactors = reten_09mo_k, rotate = chosen_rot,
 
 ```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_09mo_k) + 
-  labs(title = paste0("Preset criteria (rotation: ", chosen_rot, ")"),
-       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+  labs(title = paste0("Preset criteria (rotation: ", chosen_rot, ")"))
 ```
 
 ### Which capacities are attributed to 9-month-olds?
@@ -734,8 +828,7 @@ efa_60mo_par <- fa(d_60mo, nfactors = reten_60mo_par, rotate = chosen_rot,
 
 ```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_60mo_par) + 
-  labs(title = paste0("Parallel analysis (rotation: ", chosen_rot, ")"),
-       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+  labs(title = paste0("Parallel analysis (rotation: ", chosen_rot, ")"))
 ```
 
 ### Which capacities are attributed to 5-year-olds?
@@ -767,8 +860,7 @@ efa_60mo_bic <- fa(d_60mo, nfactors = reten_60mo_bic, rotate = chosen_rot,
 
 ```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_60mo_bic) + 
-  labs(title = paste0("Minimizing BIC (rotation: ", chosen_rot, ")"),
-       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+  labs(title = paste0("Minimizing BIC (rotation: ", chosen_rot, ")"))
 ```
 
 ### Which capacities are attributed to 5-year-olds?
@@ -797,8 +889,7 @@ efa_60mo_k <- fa(d_60mo, nfactors = reten_60mo_k, rotate = chosen_rot,
 
 ```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_60mo_k) + 
-  labs(title = paste0("Preset criteria (rotation: ", chosen_rot, ")"),
-       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+  labs(title = paste0("Preset criteria (rotation: ", chosen_rot, ")"))
 ```
 
 ### Which capacities are attributed to 5-year-olds?
@@ -806,6 +897,42 @@ heatmap_fun(efa_60mo_k) +
 ```{r, fig.width = 3.5, fig.asp = 2}
 itemsplot_fun(efa_60mo_k, target = "5-year-olds") + 
   labs(title = "Preset factor retention criteria\n(Weisman et al., 2017)")
+```
+
+
+# Subset of capacities from Weisman et al. (2017)
+
+```{r}
+d_all_wdm2017 <- d_all %>%
+  select(being_aware_of_things, feeling_calm, feeling_embarrassed, 
+         feeling_guilty, feeling_happy, feeling_loved, feeling_pain, 
+         feeling_pleasure, feeling_pride, feeling_sad, feeling_safe, 
+         feeling_scared, feeling_tired, getting_angry, getting_hungry, 
+         getting_hurt_feelings, having_goals, having_self_control, 
+         having_thoughts, having_wants_and_desires, hearing_sounds, 
+         making_choices, planning, reasoning_about_things, 
+         recognizing_others_emotions, recognizing_somebody_else, 
+         remembering_things, seeing, telling_right_from_wrong)
+```
+
+```{r}
+fa.parallel(d_all_wdm2017)
+```
+
+```{r}
+VSS(d_all_wdm2017, rotate = "varimax")
+```
+
+```{r}
+reten_fun(d_all_wdm2017, "varimax")
+```
+
+```{r, fig.width = 4, fig.asp = 0.8}
+fa(d_all_wdm2017, 3, "varimax") %>% heatmap_fun()
+```
+
+```{r, fig.width = 4, fig.asp = 0.8}
+fa(d_all_wdm2017, 2, "varimax") %>% heatmap_fun()
 ```
 
 
