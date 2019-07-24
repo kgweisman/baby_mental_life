@@ -46,7 +46,10 @@ source("./scripts/reten_fun.R")
 
 ```{r}
 # load in de-identified raw data
-d0 <- read.csv("./data/deidentified/baby_mental_life_s1_data.csv") %>% select(-X)
+
+d0 <- read.csv("~/Desktop/BABIES/baby_mental_life/data/raw_data/baby_mental_life_s1_data.csv") %>% select(-X)
+
+#d0 <- read.csv("./data/deidentified/baby_mental_life_s1_data.csv") %>% select(-X)
 ```
 
 ```{r}
@@ -55,46 +58,53 @@ question_key <- d0[1,] %>%
   t() %>%
   data.frame() %>%
   rownames_to_column("question_qualtrics") %>%
-  rename("question_text" = X1) %>%
-  mutate(question = recode(question_qualtrics,
-                           "Duration..in.seconds." = "Duration",
-                           "Q2" = "Age",
-                           "Q3" = "GenderSex",
-                           "Q3_3_TEXT" = "GenderSex_fillIn",
-                           "Q4" = "EnglishProf",
-                           "Q5" = "FirstLang",
-                           "Q5_2_TEXT" = "FirstLang_fillIn",
-                           "Q18" = "RaceEthnicity",
-                           "Q18_10_TEXT" = "RaceEthnicity_fillIn",
-                           "Q19" = "Education",
-                           "Q20" = "Income",
-                           "Q21" = "MaritalStatus",
-                           "Q21_6_TEXT" = "MaritalStatus_fillIn",
-                           "Q22" = "HouseholdSize",
-                           "Q23" = "Parent",
-                           "Q25" = "ChildrenNumber",
-                           "Q26" = "ChildrenYoungestAge",
-                           "Q26_1_TEXT" = "ChildrenYoungestAge_fillIn1",
-                           "Q26_2_TEXT" = "ChildrenYoungestAge_fillIn2",
-                           "Q27" = "ChildrenOldestAge",
-                           "Q27_1_TEXT" = "ChildrenOldestAge_fillIn1",
-                           "Q27_2_TEXT" = "ChildrenOldestAge_fillIn2",
-                           "Q28" = "Attention",
-                           "Q29" = "Comments",
-                           .default = question_qualtrics),
-         question = case_when(grepl("the following questions", question_text) ~
-                                gsub("^.*extent is a ", "", question_text),
-                              TRUE ~ question),
-         question = case_when(grepl("capable of...", question_text) ~
-                                gsub("capable of... ", "", tolower(question)),
-                              TRUE ~ question),
-         question = gsub(" ", "_", question),
-         question = gsub("'", "", question),
-         question = gsub("newborn_-_", "target00mo_", question),
-         question = gsub("9-month-old_-_", "target09mo_", question),
-         question = gsub("5-year-old_-_", "target60mo_", question)) %>%
-  mutate(question = gsub("-", "_", question),
-         question = gsub(" \\(for_example,_smooth,_rough\\)", "", question))
+  rename(question_text = X1) %>%
+  mutate(
+    question = recode(
+      question_qualtrics,
+      "Duration..in.seconds." = "Duration",
+      "Q2" = "Age",
+      "Q3" = "GenderSex",
+      "Q3_3_TEXT" = "GenderSex_fillIn",
+      "Q4" = "EnglishProf",
+      "Q5" = "FirstLang",
+      "Q5_2_TEXT" = "FirstLang_fillIn",
+      "Q18" = "RaceEthnicity",
+      "Q18_10_TEXT" = "RaceEthnicity_fillIn",
+      "Q19" = "Education",
+      "Q20" = "Income",
+      "Q21" = "MaritalStatus",
+      "Q21_6_TEXT" = "MaritalStatus_fillIn",
+      "Q22" = "HouseholdSize",
+      "Q23" = "Parent",
+      "Q25" = "ChildrenNumber",
+      "Q26" = "ChildrenYoungestAge",
+      "Q26_1_TEXT" = "ChildrenYoungestAge_fillIn1",
+      "Q26_2_TEXT" = "ChildrenYoungestAge_fillIn2",
+      "Q27" = "ChildrenOldestAge",
+      "Q27_1_TEXT" = "ChildrenOldestAge_fillIn1",
+      "Q27_2_TEXT" = "ChildrenOldestAge_fillIn2",
+      "Q28" = "Attention",
+      "Q29" = "Comments",
+      .default = question_qualtrics),
+    question = case_when(
+      grepl("the following questions", question_text) ~
+        gsub("^.*extent is a ", "", question_text),
+      TRUE ~ question
+    ),
+    question = case_when(
+      grepl("capable of...", question_text) ~
+        gsub("capable of... ", "", tolower(question)),
+      TRUE ~ question
+    ),
+    question = gsub(" ", "_", question),
+    question = gsub("'", "", question),
+    question = gsub("newborn_-_", "target00mo_", question),
+    question = gsub("9-month-old_-_", "target09mo_", question),
+    question = gsub("5-year-old_-_", "target60mo_", question),
+    question = gsub("-", "_", question),
+    question = gsub(" \\(for_example,_smooth,_rough\\)", "", question)
+  )
 ```
 
 ```{r}
@@ -111,17 +121,20 @@ d1 <- d0 %>%
 ```{r}
 # implement inclusion/exclusion criteria
 d2 <- d1 %>%
-  filter(Age >= 18, Age <= 45,
-         EnglishProf %in% c("Advanced", "Superior"),
-         `target00mo_please_select_34` == 34,
-         `target09mo_please_select_90` == 90,
-         `target60mo_please_select_4` == 4,
-         Attention == "Yes")
+  filter(
+    Age >= 18, Age <= 45,
+    EnglishProf %in% c("Advanced", "Superior"),
+    `target00mo_please_select_34` == 34,
+    `target09mo_please_select_90` == 90,
+    `target60mo_please_select_4` == 4,
+    Attention == "Yes"
+  )
 ```
 
 ```{r}
 # remove people with another identical set of GPS coordinates among people who passed attention checks AS DESIRED
-d3 <- d2 %>%
+d3 <- 
+  d2 %>%
   # filter(duplicateGPS == F) %>%
   select(-duplicateGPS)
 ```
@@ -129,37 +142,58 @@ d3 <- d2 %>%
 
 ```{r}
 # recode variables & drop extraneous variables
-d4 <- d3 %>%
-  select(-c(EndDate, Finished, 
-            payment, Progress, 
-            RecordedDate, StartDate, Status, 
-            timeEstimate, UserLanguage)) %>%
-  mutate_at(vars(c(starts_with("target"), Age, ChildrenNumber, 
-                   ChildrenOldestAge_fillIn1, ChildrenOldestAge_fillIn2, 
-                   ChildrenYoungestAge_fillIn1, ChildrenYoungestAge_fillIn2,
-                   Duration, HouseholdSize)),
-            funs(as.numeric(.))) %>%
-  mutate(Education = factor(Education,
-                            levels = c("No schooling completed", 
-                                       "Nursery school to 8th grade", 
-                                       "Some high school, no diploma", 
-                                       "High school graduate, diploma or equivalent (including GED)", 
-                                       "Some college credit, no degree", 
-                                       "Trade school, technical school, or vocational school",
-                                       "Associate's degree (for example, AA, AS)",
-                                       "Bachelor's degree (for example, BA, BS)",
-                                       "Master's degree (for example, MA, MS)",
-                                       "Doctor or professional degree (for example, PhD, JD, MD, MBA)")),
-         Income = factor(Income,
-                         levels = c("$5,001 - 15,000", 
-                                    "$15,001 - 30,000", 
-                                    "$30,001 - 60,000",
-                                    "$60,001 - 90,000",
-                                    "$90,001 - 150,000",
-                                    "Greater than $150,000",
-                                    "Prefer not to say")),
-         Parent = factor(Parent,
-                         levels = c("No", "Yes")))
+d4 <- 
+  d3 %>%
+  select(
+    -c(
+      EndDate, Finished, 
+      payment, Progress, 
+      RecordedDate, StartDate, Status, 
+      timeEstimate, UserLanguage
+    )
+  ) %>%
+  mutate_at(
+    vars(
+      c(
+        starts_with("target"), Age, ChildrenNumber, 
+        ChildrenOldestAge_fillIn1, ChildrenOldestAge_fillIn2, 
+        ChildrenYoungestAge_fillIn1, ChildrenYoungestAge_fillIn2,
+        Duration, HouseholdSize
+      )
+    ),
+    funs(as.numeric(.))) %>%
+  mutate(
+    Education = factor(
+      Education,
+      levels = c(
+        "No schooling completed", 
+        "Nursery school to 8th grade", 
+        "Some high school, no diploma", 
+        "High school graduate, diploma or equivalent (including GED)", 
+        "Some college credit, no degree", 
+        "Trade school, technical school, or vocational school",
+        "Associate's degree (for example, AA, AS)",
+        "Bachelor's degree (for example, BA, BS)",
+        "Master's degree (for example, MA, MS)",
+        "Doctor or professional degree (for example, PhD, JD, MD, MBA)")
+    ),
+    Income = factor(
+      Income,
+      levels = c(
+        "$5,001 - 15,000", 
+        "$15,001 - 30,000", 
+        "$30,001 - 60,000",
+        "$60,001 - 90,000",
+        "$90,001 - 150,000",
+        "Greater than $150,000",
+        "Prefer not to say"
+      )
+    ),
+    Parent = factor(
+      Parent,
+      levels = c("No", "Yes")
+    )
+  )
 ```
 
 ```{r}
@@ -169,14 +203,23 @@ d <- d4 %>% distinct()
 
 # demographic information
 d_demo <- d %>% 
-  select(ResponseId, Duration,
-         Age, starts_with("GenderSex"), starts_with("RaceEthnicity"),
-         starts_with("FirstLang"),
-         Education, Income, HouseholdSize,
-         starts_with("MaritalStatus"),
-         Parent, starts_with("Children"), 
-         Comments) %>%
-  mutate(RaceEthnicity_collapse = ifelse(grepl(",([A-Za-z])", RaceEthnicity),
+  select(
+    ResponseId, 
+    Duration,
+    Age, 
+    starts_with("GenderSex"), 
+    starts_with("RaceEthnicity"),
+    starts_with("FirstLang"),
+    Education, 
+    Income, 
+    HouseholdSize,
+    starts_with("MaritalStatus"),
+    Parent, 
+    starts_with("Children"), 
+    Comments
+  ) %>%
+  mutate(
+    RaceEthnicity_collapse = ifelse(grepl(",([A-Za-z])", RaceEthnicity),
                                          "Multiple", RaceEthnicity)) %>%
   mutate(ChildrenOldestAge_collapse = case_when(
     ChildrenOldestAge %in% c("My oldest child has not yet been born (I am/my partner is pregnant)", "My oldest child is deceased", "Prefer not to say") ~ ChildrenOldestAge,
@@ -255,7 +298,8 @@ d_demo <- d %>%
                              "My Youngest child is deceased",
                              "Prefer not to say")))  
 # all assessments of ALL TARGETS, RepsonseId as rownames
-d_all <- d %>% 
+d_all <- 
+  d %>% 
   select(ResponseId, starts_with("target"), -contains("please_select")) %>%
   gather(question, response, -ResponseId) %>%
   mutate(target = gsub("_.*$", "", question),
@@ -266,21 +310,24 @@ d_all <- d %>%
   column_to_rownames("subid")
 
 # all assessments of NEWBORNS, RepsonseId as rownames
-d_00mo <- d_all %>% 
+d_00mo <- 
+  d_all %>% 
   rownames_to_column("subid") %>%
   filter(grepl("target00mo", subid)) %>%
   mutate(subid = gsub("target..mo_", "", subid)) %>%
   column_to_rownames("subid")
 
 # all assessments of 9-MONTH-OLDS, RepsonseId as rownames
-d_09mo <- d_all %>% 
+d_09mo <- 
+  d_all %>% 
   rownames_to_column("subid") %>%
   filter(grepl("target09mo", subid)) %>%
   mutate(subid = gsub("target..mo_", "", subid)) %>%
   column_to_rownames("subid")
 
 # all assessments of 5-YEAR-OLDS, RepsonseId as rownames
-d_60mo <- d_all %>% 
+d_60mo <- 
+  d_all %>% 
   rownames_to_column("subid") %>%
   filter(grepl("target60mo", subid)) %>%
   mutate(subid = gsub("target..mo_", "", subid)) %>%
@@ -1295,10 +1342,66 @@ ggplot(d_demo %>% filter(Parent == "Yes"),
 
 # Save EFA output
 
+## clean EFA scores data
+```{r}
+efa_all_par_scores <- efa_all_par$scores[] %>% 
+  data.frame() %>%
+  rownames_to_column("subid") %>%
+  mutate(
+    target = gsub("^.*_target", "target", subid),
+    ResponseId = gsub("_target.*$", "", subid),
+    target_num = recode(
+      target,
+      "target00mo" = 0,
+      "target09mo" = 9,
+      "target60mo" = 60
+    ),
+    target_ord = recode_factor(
+      target,
+      "target00mo" = "newborns",
+      "target09mo" = "9-month-olds",
+      "target60mo" = "5-year-olds"
+    )
+  ) %>%
+  select(-subid, -target) %>%
+  gather(factor, score, -starts_with("target"), -ResponseId) %>%
+  mutate_at(vars(factor), funs(factor))
+```
+
+## additional cleaning of raw data
+```{r}
+d_all <- 
+  d_all %>%  
+  data.frame() %>%
+  rownames_to_column("subid") %>% 
+  mutate(
+    target = gsub("^.*_target", "target", subid),
+    ResponseId = gsub("_target.*$", "", subid),
+    target_num = recode(
+      target,
+      "target00mo" = 0,
+      "target09mo" = 9,
+      "target60mo" = 60
+    ),
+    target_ord = recode_factor(
+      target,
+      "target00mo" = "newborns",
+      "target09mo" = "9-month-olds",
+      "target60mo" = "5-year-olds"
+    )
+  ) %>%
+  select(-subid, -target) %>%
+  gather(item, score, -starts_with("target"), -ResponseId) %>%
+  mutate_at(vars(item), funs(factor))
+```
+
 Finally, I'll export the 4-factor EFA results to a saved file that I can draw on in our Study 2 analyses.
+
+(remember to move prior to pushing to github!)
 
 ```{r}
 saveRDS(efa_all_par, file = "./s1_efa.rds")
+write.csv(efa_all_par_scores, file = "./s1_scores.csv")
 write.csv(d_demo, file = "./s1_demo.csv")
 write.csv(d_all, file = "./s1_data.csv")
 ```

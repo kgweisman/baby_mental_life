@@ -50,13 +50,17 @@ source("./scripts/data_prep.R")
 
 ```{r}
 # load in EFA results from study 1
-efa_S1 <- readRDS("../study 1/s1_efa.rds")
+efa_S1 <- readRDS("~/Desktop/BABIES/baby_mental_life/data/scored_data/s1_efa.rds")
+
+#efa_S1 <- readRDS("../study 1/s1_efa.rds")
 ```
 
 ```{r, fig.width = 4, fig.asp = 1.5}
 heatmap_fun(efa_S1) + 
-  labs(title = paste0("STUDY 1 Parallel Analysis (rotation: ", chosen_rot, ")"),
-       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+  labs(
+    title = paste0("STUDY 1 Parallel Analysis (rotation: ", chosen_rot, ")"),
+    subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)"
+  )
 ```
 
 # EFA
@@ -97,8 +101,10 @@ efa_all_par <- fa(d_all, nfactors = reten_all_par, rotate = chosen_rot,
 
 ```{r, fig.width = 4, fig.asp = 0.7}
 heatmap_fun(efa_all_par) + 
-  labs(title = paste0("Parallel Analysis (rotation: ", chosen_rot, ")"),
-       subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)")
+  labs(
+    title = paste0("Parallel Analysis (rotation: ", chosen_rot, ")"),
+    subtitle = "'% var.' indicates the amount of shared variance explained (total = 100%)"
+  )
 ```
 
 These factors look extremely similar to what we saw in Study 1 (see above). I (Kara) would say that H1 is strongly supported.
@@ -764,7 +770,7 @@ r_temp <- lmer(response ~ target_num * domain
                + (target_num + domain | ResponseId) 
                + (target_num | capacity),
                d_temp_culled %>%
-                 mutate(target_num = target_num/12))
+                 mutate(target_num = target_num / 12))
 summary(r_temp, corr = F)
 ```
 
@@ -812,3 +818,61 @@ r5_temp <- lmer(response ~ target_num
                   filter(domain == "NEG"))
 summary(r5_temp, corr = F)
 ```
+
+# Export data 
+(remember to move prior to pushing to github!)
+
+## additional cleaning of raw data
+```{r}
+d_all <- 
+  d_all %>%  
+  data.frame() %>%
+  rownames_to_column("subid") %>% 
+  mutate(
+    target = gsub("^.*_target", "target", subid),
+    ResponseId = gsub("_target.*$", "", subid),
+    target_num = recode(
+      target,
+      "target00mo" = 0,
+      "target0Xmo" = round(4/30, 3),
+      "target01mo" = 1,
+      "target02mo" = 2,
+      "target04mo" = 4,
+      "target06mo" = 6,
+      "target09mo" = 9,
+      "target12mo" = 12,
+      "target18mo" = 18,
+      "target24mo" = 24,
+      "target36mo" = 36,
+      "target48mo" = 48,
+      "target60mo" = 60
+    ),
+    target_ord = recode_factor(
+      target,
+      "target00mo" = "newborns",
+      "target0Xmo" = "4-day-olds",
+      "target01mo" = "1-month-olds",
+      "target02mo" = "2-month-olds",
+      "target04mo" = "4-month-olds",
+      "target06mo" = "6-month-olds",
+      "target09mo" = "9-month-olds",
+      "target12mo" = "12-month-olds",
+      "target18mo" = "18-month-olds",
+      "target24mo" = "2-year-olds",
+      "target36mo" = "3-year-olds",
+      "target48mo" = "4-year-olds",
+      "target60mo" = "5-year-olds"
+    )
+  ) %>%
+  select(-subid, -target) %>%
+  gather(item, score, -starts_with("target"), -ResponseId) %>%
+  mutate_at(vars(item), funs(factor))
+```
+
+
+```{r}
+write.csv(efa_all_par_scores, file = "./s2_scores.csv")
+write.csv(d_demo, file = "./s2_demo.csv")
+write.csv(d_all, file = "./s2_data.csv")
+```
+

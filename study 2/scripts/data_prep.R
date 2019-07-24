@@ -2,7 +2,11 @@
 library(tidyverse)
 
 # load in de-identified raw data
-d0 <- read.csv("./data/deidentified/baby_mental_life_s2_data.csv") %>% select(-X)
+d0 <- 
+  read.csv("~/Desktop/BABIES/baby_mental_life/data/raw_data/baby_mental_life_s2_data.csv") %>% 
+  select(-X)
+
+#d0 <- read.csv("./data/deidentified/baby_mental_life_s2_data.csv") %>% select(-X)
 
 # make question key
 question_key <- d0[1,] %>%
